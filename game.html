@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sueca Online</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="game.js" defer></script>
+</head>
+<body class="min-h-screen w-screen overflow-hidden flex items-center justify-center font-sans text-white bg-[linear-gradient(135deg,#2b7a2f_0%,#1e4820_100%)]">
+
+  <div id="info-painel" class="fixed top-2 left-2 bg-black/80 backdrop-blur px-2 py-2 rounded-md text-[0.65rem] sm:text-[0.75rem] md:text-[0.8rem] 2xl:text-[0.95rem] flex flex-col gap-2 2xl:gap-3 max-w-[160px] sm:max-w-[180px] md:max-w-[200px] 2xl:max-w-[260px] 2xl:px-4 2xl:py-4 2xl:rounded-lg">
+    <div class="flex flex-col">
+      <h3 class="text-center text-[0.7rem] sm:text-[0.8rem] md:text-[0.85rem] 2xl:text-[1.1rem] font-bold border-b border-yellow-400 pb-1 2xl:pb-2 2xl:mb-2">Trunfo</h3>
+      <div id="trunfo" class="flex justify-center mt-1 2xl:mt-2">
+        <img src="imagens/back.svg" class="carta-trunfo w-9 md:w-10 2xl:w-16 rounded shadow-[0_0_8px_rgba(255,215,0,0.4)]" alt="Trunfo ainda não definido">
+      </div>
+      <div id="quem-trunfo" class="text-center mt-1 text-[0.6rem] sm:text-[0.7rem] 2xl:text-[0.9rem] text-yellow-400"></div>
+    </div>
+    <div class="flex flex-col">
+      <h3 class="text-center text-[0.7rem] sm:text-[0.8rem] md:text-[0.85rem] 2xl:text-[1.1rem] font-bold border-b border-yellow-400 pb-1 2xl:pb-2 2xl:mb-2">Pontuação</h3>
+      <div class="flex flex-col gap-1 2xl:gap-2">
+        <div class="flex justify-between px-2 py-1 2xl:px-3 2xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] 2xl:text-[0.9rem]">
+          <span>Nós:</span>
+          <span id="pontos-nos" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] 2xl:text-[1.05rem]">0</span>
+        </div>
+        <div class="flex justify-between px-2 py-1 2xl:px-3 2xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] 2xl:text-[0.9rem]">
+          <span>Eles:</span>
+          <span id="pontos-eles" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] 2xl:text-[1.05rem]">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="flex flex-col">
+      <h3 class="text-center text-[0.7rem] sm:text-[0.8rem] md:text-[0.85rem] 2xl:text-[1.1rem] font-bold border-b border-yellow-400 pb-1 2xl:pb-2 2xl:mb-2">Partida</h3>
+      <div class="flex flex-col gap-1 2xl:gap-2">
+        <div class="flex justify-between px-2 py-1 2xl:px-3 2xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] 2xl:text-[0.9rem]">
+          <span>Nós:</span>
+          <span id="total-nos" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] 2xl:text-[1.05rem]">0</span>
+        </div>
+        <div class="flex justify-between px-2 py-1 2xl:px-3 2xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] 2xl:text-[0.9rem]">
+          <span>Eles:</span>
+          <span id="total-eles" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] 2xl:text-[1.05rem]">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="mesa" class="relative w-[95vw] h-[95vh] max-w-[1400px] flex items-center justify-center">
+    
+  <div class="jogador topo absolute top-1 left-1/2 -translate-x-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 sm:p-3 2xl:p-5 flex flex-col items-center w-[110px] sm:w-auto 2xl:min-w-[200px]">
+      <div class="nome text-[0.75rem] md:text-sm 2xl:text-lg mb-1 2xl:mb-2 text-yellow-400">Jogador 3</div>
+      <div class="cartas flex justify-center"></div>
+    </div>
+    
+  <div class="jogador esquerda absolute left-1 top-1/2 -translate-y-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 sm:p-3 2xl:p-5 flex flex-col items-center w-[110px] sm:w-auto 2xl:min-w-[200px]">
+      <div class="nome text-[0.75rem] md:text-sm 2xl:text-lg mb-1 2xl:mb-2 text-yellow-400">Jogador 4</div>
+      <div class="cartas flex flex-col"></div>
+    </div>
+    
+  <div class="jogador direita absolute right-1 top-1/2 -translate-y-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 sm:p-3 2xl:p-5 flex flex-col items-center w-[110px] sm:w-auto 2xl:min-w-[200px]">
+      <div class="nome text-[0.75rem] md:text-sm 2xl:text-lg mb-1 2xl:mb-2 text-yellow-400">Jogador 2</div>
+      <div class="cartas flex flex-col"></div>
+    </div>
+    
+  <div class="jogador baixo absolute bottom-1 left-1/2 -translate-x-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 sm:p-3 2xl:p-5 flex flex-col items-center w-[110px] sm:w-auto 2xl:min-w-[200px]">
+      <div class="nome text-[0.75rem] md:text-sm 2xl:text-lg mb-1 2xl:mb-2 text-yellow-400">Você</div>
+      <div class="cartas flex justify-center"></div>
+    </div>
+
+  <div class="mesa-centro absolute inset-0 flex items-center justify-center pointer-events-none">
+      <img src="imagens/logo.jpg" alt="Logo do jogo" class="logo w-20 h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-full object-cover opacity-30 border-2 border-yellow-400/30 shadow-[0_0_20px_rgba(255,215,0,0.3)]" />
+    </div>
+
+  <div id="mesa-cartas" class="absolute inset-0 pointer-events-none"></div>
+  </div>
+
+</body>
+</html>
