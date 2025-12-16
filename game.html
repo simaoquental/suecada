@@ -5,41 +5,81 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sueca Online</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+  </style>
   <script src="game.js" defer></script>
 </head>
-<body class="min-h-screen w-screen overflow-hidden flex items-center justify-center font-sans text-white bg-[linear-gradient(135deg,#2b7a2f_0%,#1e4820_100%)]">
+<body class="min-h-screen w-screen flex items-center justify-center font-sans text-white bg-gradient-to-br from-[#2b7a2f] to-[#1e4820] overflow-hidden">
+  <!-- Modal de Vitória -->
+  <div id="modal-vitoria" class="fixed inset-0 flex items-center justify-center bg-black/80 p-2 xl:p-4 z-50 hidden">
+    <div class="w-full max-w-[440px] bg-gradient-to-br from-[#1e4820] to-[#2b7a2f] rounded-xl border-2 border-yellow-400 shadow-lg px-5 py-6 text-center">
+      <h2 id="vitoria-titulo" class="text-2xl font-bold mb-4 text-yellow-400">Vitória!</h2>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
+        <button id="btn-reiniciar" class="px-6 py-3 text-base font-bold rounded-lg bg-yellow-400 text-green-900 hover:scale-105 hover:bg-yellow-300 shadow-[0_0_15px_rgba(255,215,0,0.6)]">Reiniciar Jogo</button>
+        <button id="btn-menu" class="px-6 py-3 text-base font-bold rounded-lg bg-yellow-400 text-green-900 hover:scale-105 hover:bg-yellow-300 shadow-[0_0_15px_rgba(255,215,0,0.6)]">Menu</button>
+      </div>
+    </div>
+  </div>
 
-  <div id="info-painel" class="fixed top-2 left-2 bg-black/80 backdrop-blur px-2 py-2 rounded-md text-[0.65rem] sm:text-[0.75rem] md:text-[0.8rem] 2xl:text-[0.95rem] flex flex-col gap-2 2xl:gap-3 max-w-[160px] sm:max-w-[180px] md:max-w-[200px] 2xl:max-w-[260px] 2xl:px-4 2xl:py-4 2xl:rounded-lg">
-    <div class="flex flex-col">
-      <h3 class="text-center text-[0.7rem] sm:text-[0.8rem] md:text-[0.85rem] 2xl:text-[1.1rem] font-bold border-b border-yellow-400 pb-1 2xl:pb-2 2xl:mb-2">Trunfo</h3>
-      <div id="trunfo" class="flex justify-center mt-1 2xl:mt-2">
-        <img src="imagens/back.svg" class="carta-trunfo w-9 md:w-10 2xl:w-16 rounded shadow-[0_0_8px_rgba(255,215,0,0.4)]" alt="Trunfo ainda não definido">
+  <div id="modal-escolha" class="fixed inset-0 flex items-center justify-center bg-black/80 p-2 xl:p-4 z-50">
+    <div class="w-full max-w-[440px] bg-gradient-to-br from-[#1e4820] to-[#2b7a2f] rounded-xl border-2 border-yellow-400 shadow-lg px-5 py-6 text-center">
+      
+      <div class="modal-secao mb-5">
+        <h3 class="mb-2 text-sm sm:text-base xl:text-lg font-semibold">Quem Baralha?</h3>
+        <div class="text-yellow-400 text-sm sm:text-base xl:text-lg mb-2"><span id="embaralhador">-</span></div>
       </div>
-      <div id="quem-trunfo" class="text-center mt-1 text-[0.6rem] sm:text-[0.7rem] 2xl:text-[0.9rem] text-yellow-400"></div>
-    </div>
-    <div class="flex flex-col">
-      <h3 class="text-center text-[0.7rem] sm:text-[0.8rem] md:text-[0.85rem] 2xl:text-[1.1rem] font-bold border-b border-yellow-400 pb-1 2xl:pb-2 2xl:mb-2">Pontuação</h3>
-      <div class="flex flex-col gap-1 2xl:gap-2">
-        <div class="flex justify-between px-2 py-1 2xl:px-3 2xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] 2xl:text-[0.9rem]">
-          <span>Nós:</span>
-          <span id="pontos-nos" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] 2xl:text-[1.05rem]">0</span>
+
+      <div class="modal-secao mb-5">
+        <h3 class="mb-2 text-sm sm:text-base xl:text-lg font-semibold">Onde cortar?</h3>
+        <input type="range" id="corte-slider" min="1" max="39" value="20" class="w-full accent-yellow-400 cursor-pointer">
+        <div class="valor-corte text-yellow-400 font-bold text-sm sm:text-base xl:text-lg">Posição: <span id="valor-corte">20</span></div>
+      </div>
+
+      <div class="modal-secao mb-5">
+        <h3 class="mb-3 text-sm sm:text-base xl:text-lg font-semibold">Distribuidor escolhe trunfo:</h3>
+        <div class="flex flex-wrap justify-center gap-3 xl:gap-4">
+          <button class="btn-trunfo px-4 py-2 border-2 border-yellow-400 rounded-lg text-sm font-semibold bg-black/30 hover:bg-yellow-400 hover:text-green-900" data-posicao="baixo" title="Tira última carta (você recebe 10 e distribui anti-horário)">Baixo</button>
+          <button class="btn-trunfo px-4 py-2 border-2 border-yellow-400 rounded-lg text-sm font-semibold bg-black/30 hover:bg-yellow-400 hover:text-green-900" data-posicao="cima" title="Tira primeira carta (você recebe 9+1 e distribui horário)">Cima</button>
         </div>
-        <div class="flex justify-between px-2 py-1 2xl:px-3 2xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] 2xl:text-[0.9rem]">
+        <div class="mt-3 text-yellow-400 text-sm sm:text-base xl:text-lg"><span id="distribuidor">-</span></div>
+      </div>
+
+  <button class="mt-4 px-6 py-3 text-base font-bold rounded-lg bg-yellow-400 text-green-900 hover:scale-105 hover:bg-yellow-300 shadow-[0_0_15px_rgba(255,215,0,0.6)]" id="btn-iniciar" disabled>Iniciar Jogo</button>
+    </div>
+  </div>
+
+  
+  <div id="info-painel" class="fixed top-2 left-2 bg-black/80 backdrop-blur px-2 py-2 rounded-md text-xs sm:text-sm xl:text-base flex flex-col gap-2 xl:gap-3 max-w-[200px] xl:px-4 xl:py-4 xl:rounded-lg">
+    <div class="flex flex-col">
+      <h3 class="text-center text-[0.7rem] sm:text-[0.8rem] md:text-[0.85rem] xl:text-[1.1rem] font-bold border-b border-yellow-400 pb-1 xl:pb-2 xl:mb-2">Trunfo</h3>
+        <div id="trunfo" class="flex justify-center mt-1 xl:mt-2">
+        <img src="imagens/back.svg" class="w-7 md:w-8 xl:w-12 rounded shadow" alt="Trunfo ainda não definido">
+      </div>
+      <div id="quem-trunfo" class="text-center mt-1 text-[0.6rem] sm:text-[0.7rem] xl:text-[0.9rem] text-yellow-400"></div>
+    </div>
+    <div class="flex flex-col ocultar-pequeno">
+      <h3 class="text-center text-[0.7rem] sm:text-[0.8rem] md:text-[0.85rem] xl:text-[1.1rem] font-bold border-b border-yellow-400 pb-1 xl:pb-2 xl:mb-2">Pontuação</h3>
+      <div class="flex flex-col gap-1 xl:gap-2">
+        <div class="flex justify-between px-2 py-1 xl:px-3 xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] xl:text-[0.9rem]">
+          <span>Nós:</span>
+          <span id="pontos-nos" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] xl:text-[1.05rem]">0</span>
+        </div>
+        <div class="flex justify-between px-2 py-1 xl:px-3 xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] xl:text-[0.9rem]">
           <span>Eles:</span>
-          <span id="pontos-eles" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] 2xl:text-[1.05rem]">0</span>
+          <span id="pontos-eles" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] xl:text-[1.05rem]">0</span>
         </div>
       </div>
     </div>
-    <div class="flex flex-col">
-      <h3 class="text-center text-[0.7rem] sm:text-[0.8rem] md:text-[0.85rem] 2xl:text-[1.1rem] font-bold border-b border-yellow-400 pb-1 2xl:pb-2 2xl:mb-2">Partida</h3>
-      <div class="flex flex-col gap-1 2xl:gap-2">
-        <div class="flex justify-between px-2 py-1 2xl:px-3 2xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] 2xl:text-[0.9rem]">
+    <div class="flex flex-col ocultar-pequeno">
+      <h3 class="text-center text-[0.7rem] sm:text-[0.8rem] md:text-[0.85rem] xl:text-[1.1rem] font-bold border-b border-yellow-400 pb-1 xl:pb-2 xl:mb-2">Partida</h3>
+      <div class="flex flex-col gap-1 xl:gap-2">
+        <div class="flex justify-between px-2 py-1 xl:px-3 xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] xl:text-[0.9rem]">
           <span>Nós:</span>
-          <span id="total-nos" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] 2xl:text-[1.05rem]">0</span>
+          <span id="total-nos" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] xl:text-[1.05rem]">0</span>
         </div>
-        <div class="flex justify-between px-2 py-1 2xl:px-3 2xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] 2xl:text-[0.9rem]">
+        <div class="flex justify-between px-2 py-1 xl:px-3 xl:py-2 bg-white/10 rounded text-[0.7rem] sm:text-[0.75rem] xl:text-[0.9rem]">
           <span>Eles:</span>
-          <span id="total-eles" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] 2xl:text-[1.05rem]">0</span>
+          <span id="total-eles" class="font-bold text-yellow-400 text-[0.8rem] sm:text-[0.85rem] xl:text-[1.05rem]">0</span>
         </div>
       </div>
     </div>
@@ -47,28 +87,31 @@
 
   <div id="mesa" class="relative w-[95vw] h-[95vh] max-w-[1400px] flex items-center justify-center">
     
-  <div class="jogador topo absolute top-1 left-1/2 -translate-x-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 sm:p-3 2xl:p-5 flex flex-col items-center w-[110px] sm:w-auto 2xl:min-w-[200px]">
-      <div class="nome text-[0.75rem] md:text-sm 2xl:text-lg mb-1 2xl:mb-2 text-yellow-400">Jogador 3</div>
+  <div class="jogador topo absolute top-1 left-1/2 -translate-x-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 flex flex-col items-center min-w-[50px] sm:min-w-[60px] lg:min-w-[75px] xl:min-w-[105px]">
+      <img src="imagens/j3.jpg" class="w-10 h-10 rounded-full mb-1" alt="Jogador 3" />
+      <div class="text-xs md:text-sm xl:text-lg mb-1 xl:mb-2 text-yellow-400">Jogador 3</div>
       <div class="cartas flex justify-center"></div>
     </div>
     
-  <div class="jogador esquerda absolute left-1 top-1/2 -translate-y-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 sm:p-3 2xl:p-5 flex flex-col items-center w-[110px] sm:w-auto 2xl:min-w-[200px]">
-      <div class="nome text-[0.75rem] md:text-sm 2xl:text-lg mb-1 2xl:mb-2 text-yellow-400">Jogador 4</div>
+  <div class="jogador esquerda absolute left-[40px] sm:left-[80px] md:left-[100px] lg:left-[120px] xl:left-[100px] top-1/2 -translate-y-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 flex flex-col items-center min-w-[50px] sm:min-w-[60px] lg:min-w-[75px] xl:min-w-[105px]">
+      <img src="imagens/j2.webp" class="w-10 h-10 rounded-full mb-1" alt="Jogador 4" />
+      <div class="text-xs md:text-sm xl:text-lg mb-1 xl:mb-2 text-yellow-400">Jogador 4</div>
       <div class="cartas flex flex-col"></div>
     </div>
     
-  <div class="jogador direita absolute right-1 top-1/2 -translate-y-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 sm:p-3 2xl:p-5 flex flex-col items-center w-[110px] sm:w-auto 2xl:min-w-[200px]">
-      <div class="nome text-[0.75rem] md:text-sm 2xl:text-lg mb-1 2xl:mb-2 text-yellow-400">Jogador 2</div>
+  <div class="jogador direita absolute right-[40px] sm:right-[80px] md:right-[100px] lg:right-[120px] xl:right-[60px] top-1/2 -translate-y-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 flex flex-col items-center min-w-[50px] sm:min-w-[60px] lg:min-w-[75px] xl:min-w-[105px]">
+      <img src="imagens/j1.webp" class="w-10 h-10 rounded-full mb-1" alt="Jogador 2" />
+      <div class="text-xs md:text-sm xl:text-lg mb-1 xl:mb-2 text-yellow-400">Jogador 2</div>
       <div class="cartas flex flex-col"></div>
     </div>
     
-  <div class="jogador baixo absolute bottom-1 left-1/2 -translate-x-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 sm:p-3 2xl:p-5 flex flex-col items-center w-[110px] sm:w-auto 2xl:min-w-[200px]">
-      <div class="nome text-[0.75rem] md:text-sm 2xl:text-lg mb-1 2xl:mb-2 text-yellow-400">Você</div>
+  <div class="jogador baixo absolute bottom-1 left-1/2 -translate-x-1/2 bg-black/60 border-2 border-yellow-400/30 rounded-lg p-2 flex flex-col items-center min-w-[300px] sm:min-w-[350px] lg:min-w-[450px] xl:min-w-[550px]">
+      <div class="text-xs md:text-sm xl:text-lg mb-1 xl:mb-2 text-yellow-400">Você</div>
       <div class="cartas flex justify-center"></div>
     </div>
 
   <div class="mesa-centro absolute inset-0 flex items-center justify-center pointer-events-none">
-      <img src="imagens/logo.jpg" alt="Logo do jogo" class="logo w-20 h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-full object-cover opacity-30 border-2 border-yellow-400/30 shadow-[0_0_20px_rgba(255,215,0,0.3)]" />
+      <img src="imagens/logo.jpg" alt="Logo do jogo" class="w-20 sm:w-28 md:w-32 lg:w-36 xl:w-40 2xl:w-44 h-auto rounded-full object-cover opacity-30 border-2 border-yellow-400/30 shadow" />
     </div>
 
   <div id="mesa-cartas" class="absolute inset-0 pointer-events-none"></div>

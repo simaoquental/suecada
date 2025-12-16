@@ -7,25 +7,28 @@
   <title>Sueca Online</title>
 </head>
 <body class="min-h-screen w-screen overflow-hidden">
-  <main class="absolute inset-0 flex flex-col gap-3 items-center justify-center text-white text-center overflow-hidden" style="background: radial-gradient(circle at center, #2b7a2f 0%, #1e4820 100%);">
+  <main class="absolute inset-0 flex flex-col gap-3 items-center justify-center text-white text-center overflow-hidden bg-[radial-gradient(circle_at_center,_#2b7a2f_0%,_#1e4820_100%)]">
     <div class="relative p-2 sm:p-4">
-      <h1 class="title text-3xl sm:text-5xl lg:text-6xl m-0 font-bold" style="text-shadow: 0 0 20px rgba(0,0,0,0.5);">Suecada Online</h1>
-      <p class="subtitle text-sm sm:text-base lg:text-lg mt-1 sm:mt-2 opacity-90">O clássico jogo de cartas agora digital!</p>
-      <div class="relative h-[80px] w-[200px] sm:h-[110px] sm:w-[280px] lg:h-[130px] lg:w-[340px] mt-6 mb-2 mx-auto">
-        <img src="imagens/ace_of_spades.svg" alt="Ás de Espadas" class="absolute left-[30%] top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-12deg] w-[55px] sm:w-[75px] lg:w-[90px] h-auto drop-shadow" />
-        <img src="imagens/7_of_diamonds.svg" alt="Sete de Ouros" class="absolute left-[40%] top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-4deg] w-[55px] sm:w-[75px] lg:w-[90px] h-auto drop-shadow" />
-        <img src="imagens/7_of_clubs.svg" alt="Sete de Paus" class="absolute left-[60%] top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[4deg] w-[55px] sm:w-[75px] lg:w-[90px] h-auto drop-shadow" />
-        <img src="imagens/ace_of_hearts.svg" alt="Ás de Copas" class="absolute left-[70%] top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[12deg] w-[55px] sm:w-[75px] lg:w-[90px] h-auto drop-shadow" />
+      <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl m-0 font-bold text-yellow-300 [text-shadow:0_0_20px_rgba(0,0,0,0.5)]">Suecada Online</h1>
+      <p class="subtitle text-sm sm:text-base md:text-lg mt-1 sm:mt-2 opacity-90">O clássico jogo de cartas agora digital!</p>
+      <div class="relative h-[80px] w-[200px] sm:h-[100px] sm:w-[260px] md:h-[120px] md:w-[320px] mt-6 sm:mt-8 mb-2 mx-auto">
+        <img src="imagens/ace_of_spades.svg" alt="Ás de Espadas" class="absolute left-[30%] top-[50%] -translate-x-1/2 -translate-y-1/2 -rotate-[12deg] w-[55px] sm:w-[70px] md:w-[85px] h-auto [filter:drop-shadow(0_0_5px_rgba(0,0,0,0.3))]">
+        <img src="imagens/7_of_diamonds.svg" alt="Sete de Ouros" class="absolute left-[40%] top-[50%] -translate-x-1/2 -translate-y-1/2 -rotate-[4deg] w-[55px] sm:w-[70px] md:w-[85px] h-auto [filter:drop-shadow(0_0_5px_rgba(0,0,0,0.3))]">
+        <img src="imagens/7_of_clubs.svg" alt="Sete de Paus" class="absolute left-[60%] top-[50%] -translate-x-1/2 -translate-y-1/2 rotate-[4deg] w-[55px] sm:w-[70px] md:w-[85px] h-auto [filter:drop-shadow(0_0_5px_rgba(0,0,0,0.3))]">
+        <img src="imagens/ace_of_hearts.svg" alt="Ás de Copas" class="absolute left-[70%] top-[50%] -translate-x-1/2 -translate-y-1/2 rotate-[12deg] w-[55px] sm:w-[70px] md:w-[85px] h-auto [filter:drop-shadow(0_0_5px_rgba(0,0,0,0.3))]">
       </div>
     </div>
 
-    <div class="bg-black/30 backdrop-blur-md px-4 py-6 sm:px-8 sm:py-10 rounded-lg w-[90%] max-w-[350px] sm:max-w-[500px]">
-      <button class="bg-[#f0c040] text-black border-0 px-6 py-3 sm:px-10 sm:py-5 rounded-md font-bold text-base sm:text-lg lg:text-xl cursor-pointer transition-all duration-300 hover:bg-[#ffcc40] hover:-translate-y-1 hover:shadow-[0_5px_15px_rgba(0,0,0,0.2)]" onclick="startGame()">Começar o Jogo!</button>
+    <div class="bg-black/30 backdrop-blur-md px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10 rounded-lg w-[90%] max-w-[350px] sm:max-w-[450px] md:max-w-[500px]">
+      <button class="bg-[#f0c040] text-black border-0 px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 rounded-md font-bold text-base sm:text-lg md:text-xl cursor-pointer transition-all duration-300 hover:bg-[#ffcc40] hover:-translate-y-1 hover:shadow-[0_5px_15px_rgba(0,0,0,0.2)]" onclick="startGame()">Começar o Jogo!</button>
     </div>
   </main>
 
   <script>
     function startGame() {
+      // Zera a pontuação salva antes de iniciar o jogo
+      localStorage.setItem('pontosPartidaNos', '0');
+      localStorage.setItem('pontosPartidaEles', '0');
       window.location.href = 'game.html';
     }
   </script>
