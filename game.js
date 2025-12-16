@@ -72,7 +72,6 @@ function renderizarJogo() {
     const trunfo = escolherTrunfo(baralho, trunfoPosicaoEscolhida);
     const maos = darCartas(baralho, trunfoPosicaoEscolhida, distribuidorIndex);
     
-    // Não adicionar o trunfo à mão do distribuidor, apenas mostrar visualmente
     
     const nomesJogadores = ['Você', 'Jogador 4', 'Jogador 3', 'Jogador 2'];
     const trunfoImg = document.querySelector('#trunfo img');
@@ -81,76 +80,23 @@ function renderizarJogo() {
     const quemTrunfoDiv = document.querySelector('#quem-trunfo');
     quemTrunfoDiv.textContent = nomesJogadores[distribuidorIndex];
     
-    const jogadores = [
-        { elemento: document.querySelector('.jogador.baixo .cartas'), mao: maos[0], mostrar: true },
-        { elemento: document.querySelector('.jogador.esquerda .cartas'), mao: maos[1], mostrar: false },
-        { elemento: document.querySelector('.jogador.topo .cartas'), mao: maos[2], mostrar: false },
-        { elemento: document.querySelector('.jogador.direita .cartas'), mao: maos[3], mostrar: false }
-    ];
-    
-    jogadores.forEach((jogador, index) => {
-        jogador.elemento.innerHTML = '';
-        
-        // Para telas >=1024px (lg) e jogadores horizontais, criar duas linhas
-        let linhaCima, linhaBaixo;
-        if (window.innerWidth >= 1024 && (index === 0 || index === 2) && jogador.mostrar) {
-            linhaCima = document.createElement('div');
-            linhaCima.className = 'linha-cima flex justify-center gap-1 mb-2';
-            linhaBaixo = document.createElement('div');
-            linhaBaixo.className = 'linha-baixo flex justify-center gap-1';
-            jogador.elemento.appendChild(linhaCima);
-            jogador.elemento.appendChild(linhaBaixo);
-        }
-        
-        if (!jogador.mostrar) return;
-        
-        jogador.mao.forEach((carta, cartaIndex) => {
-                const img = document.createElement('img');
-                img.className = 'carta block rounded-sm transition-all duration-300 ease-in-out filter brightness-100';
-                img.dataset.jogador = index;
-                img.dataset.cartaIndex = cartaIndex;
-
-                // tamanho responsivo das cartas
-                img.classList.add('h-[45px]', 'sm:h-[55px]', 'md:h-[65px]', 'lg:h-[70px]', 'xl:h-[90px]', '2xl:h-[100px]', 'w-auto');
-
-                // sobreposição horizontal (para cima/baixo) e vertical (para lados)
-                if (index === 0 || index === 2) {
-                    if (window.innerWidth >= 1024) {
-                        // Para telas grandes, dividir as cartas restantes igualmente entre as linhas
-                        const totalCartas = jogador.mao.length;
-                        const metade = Math.ceil(totalCartas / 2);
-                        if (cartaIndex < metade) {
-                            linhaCima.appendChild(img);
-                        } else {
-                            linhaBaixo.appendChild(img);
-                        }
-                    } else {
-                        // Normal, com sobreposição
-                        if (cartaIndex === 0) img.style.marginLeft = '0';
-                        else img.classList.add('-ml-[8px]', 'sm:-ml-[10px]', 'md:-ml-[12px]', 'lg:-ml-[14px]', 'xl:-ml-[16px]', '2xl:-ml-[18px]');
-                        jogador.elemento.appendChild(img);
-                    }
-                } else {
-                    // jogador nas laterais: empilhar verticalmente
-                    if (cartaIndex === 0) img.style.marginTop = '0';
-                    else img.classList.add('-mt-5', 'sm:-mt-6', 'md:-mt-8', 'lg:-mt-9', 'xl:-mt-10', '2xl:-mt-11');
-                    jogador.elemento.appendChild(img);
-                }
-
-                if (jogador.mostrar) {
-                    img.src = `imagens/${carta.imagem}`;
-                    img.alt = `${carta.valor} de ${carta.naipeSimbolo}`;
-                    img.addEventListener('click', () => jogarCarta(index, cartaIndex));
-                    if (index === 0) {
-                        img.classList.add('cursor-pointer', 'transform', 'hover:scale-105', 'hover:-translate-y-2', 'hover:brightness-110', 'hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]');
-                    }
-                } else {
-                    img.src = 'imagens/back.svg';
-                    img.alt = 'Carta virada';
-                }
-
-                jogador.elemento.appendChild(img);
-        });
+    const jogador = { elemento: document.querySelector('.jogador.baixo .cartas'), mao: maos[0], mostrar: true };
+    jogador.elemento.innerHTML = '';
+    jogador.mao.forEach((carta, cartaIndex) => {
+        const img = document.createElement('img');
+        img.className = 'carta block rounded-sm transition-all duration-300 ease-in-out filter brightness-100';
+        img.dataset.jogador = 0;
+        img.dataset.cartaIndex = cartaIndex;
+        // tamanho responsivo das cartas
+        img.classList.add('h-[45px]', 'sm:h-[55px]', 'md:h-[65px]', 'lg:h-[70px]', 'xl:h-[90px]', '2xl:h-[100px]', 'w-auto');
+        // sobreposição horizontal
+        if (cartaIndex === 0) img.style.marginLeft = '0';
+        else img.classList.add('-ml-[8px]', 'sm:-ml-[10px]', 'md:-ml-[12px]', 'lg:-ml-[14px]', 'xl:-ml-[16px]', '2xl:-ml-[18px]');
+        img.src = `imagens/${carta.imagem}`;
+        img.alt = `${carta.valor} de ${carta.naipeSimbolo}`;
+        img.addEventListener('click', () => jogarCarta(0, cartaIndex));
+        img.classList.add('cursor-pointer', 'transform', 'hover:scale-105', 'hover:-translate-y-2', 'hover:brightness-110', 'hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]');
+        jogador.elemento.appendChild(img);
     });
     
         document.getElementById('modal-escolha').classList.add('hidden');
@@ -435,8 +381,8 @@ function finalizarRodada() {
     }
 
     if (vencedor === 0) {
-        atualizarMaos(); // Atualiza a mão do jogador humano
-        // As cartas já ficam jogáveis pois atualizarDestaqueCartasJogaveis é chamado
+        atualizarMaos(); // Atualiza a mão do jogador
+        
     } else {
         setTimeout(() => iaJoga(vencedor), 1500);
     }
@@ -447,7 +393,7 @@ function determinarVencedor() {
     let vencedor = estadoJogo.cartasNaMesa.findIndex(c => c);
     if (vencedor === -1) vencedor = estadoJogo.primeiroJogador;
     let melhorCarta = estadoJogo.cartasNaMesa[vencedor];
-    // Se não há nenhuma carta na mesa, retorna o primeiro jogador (evita erro)
+    // Se não há nenhuma carta na mesa, retorna o primeiro jogador 
     if (!melhorCarta) {
         return estadoJogo.primeiroJogador;
     }
@@ -474,50 +420,26 @@ function determinarVencedor() {
 }
 
 function atualizarMaos() {
-    const jogadores = [
-        { elemento: document.querySelector('.jogador.baixo .cartas'), index: 0, mostrar: true },
-        { elemento: document.querySelector('.jogador.esquerda .cartas'), index: 1, mostrar: false },
-        { elemento: document.querySelector('.jogador.topo .cartas'), index: 2, mostrar: false },
-        { elemento: document.querySelector('.jogador.direita .cartas'), index: 3, mostrar: false }
-    ];
-    
-    jogadores.forEach(jogador => {
-        if (!jogador.mostrar) return;
-        jogador.elemento.innerHTML = '';
-        estadoJogo.maos[jogador.index].forEach((carta, cartaIndex) => {
-            const img = document.createElement('img');
-            img.className = 'carta block rounded-sm transition-all duration-300 ease-in-out filter brightness-100';
-            img.dataset.jogador = jogador.index;
-            img.dataset.cartaIndex = cartaIndex;
-
-            // tamanho responsivo das cartas
-            img.classList.add('h-[45px]', 'sm:h-[55px]', 'md:h-[65px]', 'lg:h-[70px]', 'xl:h-[90px]', '2xl:h-[100px]', 'w-auto');
-
-            // sobreposição horizontal (para cima/baixo) e vertical (para lados)
-            if (jogador.index === 0 || jogador.index === 2) {
-                if (cartaIndex === 0) img.style.marginLeft = '0';
-                else img.classList.add('-ml-[8px]', 'sm:-ml-[10px]', 'md:-ml-[12px]', 'lg:-ml-[14px]', 'xl:-ml-[16px]', '2xl:-ml-[18px]');
-            } else {
-                if (cartaIndex === 0) img.style.marginTop = '0';
-                else img.classList.add('-mt-5', 'sm:-mt-6', 'md:-mt-8', 'lg:-mt-9', 'xl:-mt-10', '2xl:-mt-11');
-                img.classList.add('rotate-90');
-            }
-
-            if (jogador.mostrar) {
-                img.src = `imagens/${carta.imagem}`;
-                img.alt = `${carta.valor} de ${carta.naipeSimbolo}`;
-                // Só adiciona evento de clique se for a vez do jogador 0
-                if (jogador.index === 0 && estadoJogo.jogadorAtual === 0) {
-                    img.addEventListener('click', () => jogarCarta(jogador.index, cartaIndex));
-                    img.classList.add('cursor-pointer', 'transform', 'hover:scale-105', 'hover:-translate-y-2', 'hover:brightness-110', 'hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]');
-                }
-            } else {
-                img.src = 'imagens/back.svg';
-                img.alt = 'Carta virada';
-            }
-
-            jogador.elemento.appendChild(img);
-        });
+    const jogador = { elemento: document.querySelector('.jogador.baixo .cartas'), index: 0, mostrar: true };
+    jogador.elemento.innerHTML = '';
+    estadoJogo.maos[0].forEach((carta, cartaIndex) => {
+        const img = document.createElement('img');
+        img.className = 'carta block rounded-sm transition-all duration-300 ease-in-out filter brightness-100';
+        img.dataset.jogador = 0;
+        img.dataset.cartaIndex = cartaIndex;
+        // tamanho responsivo das cartas
+        img.classList.add('h-[45px]', 'sm:h-[55px]', 'md:h-[65px]', 'lg:h-[70px]', 'xl:h-[90px]', '2xl:h-[100px]', 'w-auto');
+        // sobreposição horizontal
+        if (cartaIndex === 0) img.style.marginLeft = '0';
+        else img.classList.add('-ml-[8px]', 'sm:-ml-[10px]', 'md:-ml-[12px]', 'lg:-ml-[14px]', 'xl:-ml-[16px]', '2xl:-ml-[18px]');
+        img.src = `imagens/${carta.imagem}`;
+        img.alt = `${carta.valor} de ${carta.naipeSimbolo}`;
+        // Só adiciona evento de clique se for a vez do jogador 0
+        if (estadoJogo.jogadorAtual === 0) {
+            img.addEventListener('click', () => jogarCarta(0, cartaIndex));
+            img.classList.add('cursor-pointer', 'transform', 'hover:scale-105', 'hover:-translate-y-2', 'hover:brightness-110', 'hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]');
+        }
+        jogador.elemento.appendChild(img);
     });
 
     atualizarDestaqueCartasJogaveis();
@@ -574,8 +496,8 @@ function finalizarJogo() {
     let vencedor = '';
     
     // Vitória da equipa (4 partidas)
-    if (estadoJogo.pontosPartidaNos === 4 || estadoJogo.pontosPartidaEles === 4) {
-        const equipaVencedora = estadoJogo.pontosPartidaNos === 4 ? 'NÓS' : 'ELES';
+    if (estadoJogo.pontosPartidaNos >= 4 || estadoJogo.pontosPartidaEles >= 4) {
+        const equipaVencedora = estadoJogo.pontosPartidaNos >= 4 ? 'NÓS' : 'ELES';
         mostrarModalVitoria(equipaVencedora);
         return;
     }
@@ -591,9 +513,13 @@ function finalizarJogo() {
     } else if (estadoJogo.pontosEles > 60) {
         pontosGanhos = 1;
         vencedor = 'ELES';
-    } else {
-        pontosGanhos = 0;
-        vencedor = 'NINGUÉM';
+    } else if (estadoJogo.pontosEles === 120 ) {
+        pontosGanhos = 4;
+        vencedor = 'ELES';
+    } else if (estadoJogo.pontosNos === 120 ) {
+        pontosGanhos = 4;
+        vencedor = 'NÓS';
+        
     }
     
     if (vencedor === 'NÓS') {
