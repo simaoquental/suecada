@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Suecada</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    screens: {
+                        '3xs': '256px', '2xs': '288px', 'xs': '320px',
+                        'sm': '384px', 'md': '448px', 'lg': '512px',
+                        'xl': '576px', '2xl': '672px',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-[#052c1e] bg-[radial-gradient(circle,_#065f46_0%,_#052c1e_100%)] text-white h-[100dvh] flex flex-col items-center justify-between overflow-hidden select-none font-sans">
+
+    <header id="placar" class="hidden w-full max-w-2xl flex items-center justify-between p-2 xs:p-4 z-50">
+        <div class="flex-1 bg-black/40 backdrop-blur-md p-2 rounded-xl border-l-4 border-yellow-500 shadow-lg">
+            <div class="text-[8px] sm:text-[10px] font-black text-yellow-500 uppercase leading-none mb-1">NÓS (<span id="jogos-nos">0</span>)</div>
+            <div id="pts-nos" class="text-base sm:text-2xl font-black tabular-nums">0</div>
+        </div>
+        <div class="flex flex-col items-center px-4">
+            <div class="w-7 h-10 sm:w-10 sm:h-14 bg-black/40 rounded border border-white/10 flex items-center justify-center overflow-hidden">
+                <img id="trunfo-img" class="hidden w-full h-full object-contain p-1">
+            </div>
+        </div>
+        <div class="flex-1 bg-black/40 backdrop-blur-md p-2 rounded-xl border-r-4 border-white text-right shadow-xl">
+            <div class="text-[8px] sm:text-[10px] font-black text-white/60 uppercase leading-none mb-1">ELES (<span id="jogos-eles">0</span>)</div>
+            <div id="pts-eles" class="text-base sm:text-2xl font-black tabular-nums">0</div>
+        </div>
+    </header>
+
+    <main id="screen-game" class="hidden flex-1 flex flex-col items-center justify-center w-full relative px-2">
+        <div id="mesa" class="relative aspect-square w-full max-w-[240px] xs:max-w-[280px] sm:max-w-[360px] md:max-w-[400px] bg-[#064e3b] rounded-full border-[6px] sm:border-[10px] border-[#2d1a04] shadow-2xl flex items-center justify-center">
+            
+            <div id="indicador-vez" class="absolute inset-0 rounded-full transition-all duration-500"></div>
+
+            <div id="name-0" class="absolute bottom-1 xs:bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] sm:text-xs font-bold z-50 whitespace-nowrap shadow-md">---</div>
+            <div id="name-1" class="absolute right-1 xs:right-2 top-1/2 -translate-y-1/2 rotate-90 px-2 py-0.5 rounded-full text-[9px] sm:text-xs font-bold z-50 whitespace-nowrap shadow-md">---</div>
+            <div id="name-2" class="absolute top-1 xs:top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] sm:text-xs font-bold z-50 whitespace-nowrap shadow-md">---</div>
+            <div id="name-3" class="absolute left-1 xs:left-2 top-1/2 -translate-y-1/2 -rotate-90 px-2 py-0.5 rounded-full text-[9px] sm:text-xs font-bold z-50 whitespace-nowrap shadow-md">---</div>
+        </div>
+    </main>
+
+    <footer class="w-full flex justify-center pb-2 sm:pb-6 px-2">
+        <div id="mao" class="hidden flex flex-wrap justify-center items-end gap-y-1 sm:gap-y-0 w-full max-w-lg overflow-visible"></div>
+    </footer>
+
+    <div id="screen-home" class="fixed inset-0 z-[200] bg-[#052c1e] flex flex-col items-center justify-center p-6 text-center">
+        <h1 class="text-5xl font-black italic mb-8 text-yellow-500">SUECADA</h1>
+        <input type="text" id="input-name" placeholder="Teu Nome" class="bg-white/10 p-4 rounded-xl w-full max-w-xs mb-4 text-center">
+        <button onclick="irParaLobby()" class="bg-yellow-500 text-black w-full max-w-xs py-4 rounded-xl font-black uppercase shadow-lg active:scale-95">Entrar</button>
+    </div>
+
+    <div id="screen-lobby" class="hidden fixed inset-0 z-[195] bg-[#052c1e] flex flex-col items-center justify-center p-6 text-center text-white">
+        <h2 class="text-2xl font-black mb-6 text-yellow-500 uppercase italic">Salas</h2>
+        <button onclick="criarSala()" class="bg-yellow-500 text-black w-full max-w-xs py-4 rounded-xl font-black mb-4 uppercase active:scale-95 shadow-lg">Criar Sala</button>
+        <div class="w-full max-w-xs flex gap-2">
+            <input type="text" id="input-room-id" placeholder="CÓDIGO" class="bg-white/10 p-4 rounded-xl flex-1 text-center outline-none border border-white/20 uppercase font-mono">
+            <button onclick="entrarNaSala()" class="bg-white text-black px-6 rounded-xl font-black active:scale-95">OK</button>
+        </div>
+    </div>
+
+    <div id="screen-wait" class="hidden fixed inset-0 z-[180] bg-[#052c1e]/95 flex flex-col items-center justify-center text-center p-6 text-white">
+        <div class="h-12 w-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-6 mx-auto"></div>
+        <h2 class="text-xl font-black uppercase text-yellow-500" id="count">1/4 Jogadores</h2>
+        <p class="text-white/40 mt-4 text-sm font-mono uppercase">CÓDIGO: <span id="display-id" class="text-white font-bold bg-black/40 px-3 py-1 rounded">---</span></p>
+    </div>
+
+    <div id="modal-corte" class="hidden fixed inset-0 z-[300] bg-black/95 flex items-center justify-center p-6">
+        <div class="bg-emerald-900 p-6 rounded-3xl border border-yellow-500/30 text-center w-full max-w-xs">
+            <h2 class="text-xl font-black text-yellow-500 mb-2 uppercase">Partir</h2>
+            <div class="text-6xl font-black mb-6" id="corte-numero">20</div>
+            <input type="range" id="corte-slider" min="1" max="39" oninput="document.getElementById('corte-numero').innerText = this.value" class="w-full h-2 accent-yellow-500">
+            <button onclick="confirmarCorte()" class="w-full mt-6 py-4 bg-yellow-500 text-black font-black rounded-xl uppercase">Confirmar</button>
+        </div>
+    </div>
+
+    <div id="modal-trunfo" class="hidden fixed inset-0 z-[300] bg-black/90 flex items-center justify-center p-6">
+        <div class="bg-emerald-900 p-6 rounded-3xl border border-yellow-500 text-center w-full max-w-xs">
+            <h2 class="text-xl font-black text-yellow-500 mb-6 uppercase italic text-shadow">Escolher Trunfo</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="escolherTrunfo('primeira')" class="bg-yellow-500 text-black p-4 rounded-xl font-black uppercase text-sm">Cima</button>
+                <button onclick="escolherTrunfo('ultima')" class="bg-white text-black p-4 rounded-xl font-black uppercase text-sm">Baixo</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="jogo.js"></script>
+</body>
+</html>
