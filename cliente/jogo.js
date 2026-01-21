@@ -1,153 +1,137 @@
 const socket = io();
 let meuNome = "", meuIdx = null, estado = {}, maoLocal = [];
 
+socket.on('erro', d => {
+    alert(d.msg);
+    if (d.msg.includes("nome") || d.msg.includes("cheia") || d.msg.includes("mesa")) {
+        document.getElementById('screen-lobby').classList.add('hidden');
+        document.getElementById('screen-home').classList.remove('hidden');
+        const input = document.getElementById('input-name');
+        input.value = "";
+        input.focus();
+    }
+});
+
+socket.on('fimDeJogo', d => {
+    alert(d.msg);
+    setTimeout(() => location.reload(), 3000);
+});
+
+socket.on('listaRanking', ranking => {
+    const list = document.getElementById('ranking-list');
+    if (!list) return;
+    list.innerHTML = '<h3 class="text-yellow-500 font-black text-center mb-4 uppercase text-xs">Ranking</h3>';
+    ranking.forEach((player, idx) => {
+        list.innerHTML += `<div class="flex justify-between text-xs border-b border-white/5 pb-2">
+            <span>${idx+1}. ${player.nome}</span><span class="text-emerald-400">${player.vitorias} Vit.</span>
+        </div>`;
+    });
+});
+
 function irParaLobby() {
     meuNome = document.getElementById('input-name').value.trim();
     if (meuNome.length < 2) return alert("Nome inválido!");
     document.getElementById('screen-home').classList.add('hidden');
     document.getElementById('screen-lobby').classList.remove('hidden');
+    socket.emit('pedirRanking');
 }
 
-function criarSala() {
-    const id = Math.random().toString(36).substring(2, 7).toUpperCase();
-    entrar(id);
-}
-
-function entrarNaSala() {
-    const id = document.getElementById('input-room-id').value.trim().toUpperCase();
-    if (id.length < 3) return alert("Código inválido!");
-    entrar(id);
-}
-
+function criarSala() { entrar(Math.random().toString(36).substring(2, 7).toUpperCase()); }
+function entrarNaSala() { entrar(document.getElementById('input-room-id').value.trim().toUpperCase()); }
 function entrar(id) {
     document.getElementById('display-id').innerText = id;
-    document.getElementById('screen-lobby').classList.add('hidden');
-    document.getElementById('screen-wait').classList.remove('hidden');
     socket.emit('joinRoom', { salaId: id, nome: meuNome });
 }
 
-socket.on('init', d => { meuIdx = d.jogadorIndex; });
-
-socket.on('solicitarCorte', d => {
-    if (meuIdx === d.quemCorta) document.getElementById('modal-corte').classList.remove('hidden');
+socket.on('init', d => { 
+    meuIdx = d.jogadorIndex; 
+    document.getElementById('screen-lobby').classList.add('hidden');
+    document.getElementById('placar').classList.remove('hidden'); 
 });
 
-socket.on('solicitarTrunfo', d => {
-    if (meuIdx === d.quemDa) document.getElementById('modal-trunfo').classList.remove('hidden');
-});
+socket.on('suaMao', m => { maoLocal = m; renderizarMao(); });
+socket.on('estadoPublico', est => { estado = est; atualizarUI(); renderizarMesa(); renderizarMao(); });
+socket.on('solicitarCorte', d => { if(meuIdx === d.quemCorta) document.getElementById('modal-corte').classList.remove('hidden'); });
+socket.on('solicitarTrunfo', d => { if(meuIdx === d.quemEscolhe) document.getElementById('modal-trunfo').classList.remove('hidden'); });
 
-socket.on('maoAtualizada', m => { 
-    maoLocal = m; 
-    renderizarMao(); 
-});
+function confirmarCorte() {
+    socket.emit('cortar', { posicao: document.getElementById('corte-slider').value });
+    document.getElementById('modal-corte').classList.add('hidden');
+}
+function escolherTrunfo(escolha) {
+    socket.emit('escolherTrunfo', { escolha });
+    document.getElementById('modal-trunfo').classList.add('hidden');
+}
+function jogarCarta(id) { socket.emit('jogarCarta', { cartaId: id }); }
 
-socket.on('estadoPublico', e => {
-    estado = e;
-    if (e.fase === 'espera') {
-        document.getElementById('count').innerText = `${e.nomes.length}/4 Jogadores`;
-        return;
-    }
+function atualizarUI() {
+    document.getElementById('pontos-nos').innerText = estado.ptsNos || 0;
+    document.getElementById('pontos-eles').innerText = estado.ptsEles || 0;
+    document.getElementById('placar-nos').innerText = estado.placarNos || 0;
+    document.getElementById('placar-eles').innerText = estado.placarEles || 0;
     
-    document.getElementById('screen-wait').classList.add('hidden');
-    document.getElementById('screen-game').classList.remove('hidden');
-    document.getElementById('placar').classList.remove('hidden');
-    document.getElementById('mao').classList.remove('hidden');
-    
-    document.getElementById('pts-nos').innerText = e.ptsNos;
-    document.getElementById('pts-eles').innerText = e.ptsEles;
-    document.getElementById('jogos-nos').innerText = e.placarNos;
-    document.getElementById('jogos-eles').innerText = e.placarEles;
-
-    if (e.trunfoImagem) {
-        const t = document.getElementById('trunfo-img');
-        t.src = `cartas/${e.trunfoImagem}`;
-        t.classList.remove('hidden');
+    if (estado.trunfo) {
+        document.getElementById('display-trunfo').innerHTML = `<img src="cartas/${estado.trunfo.imagem}" class="w-full h-full object-contain">`;
     }
 
-    renderizarNomes(e.nomes);
-    renderizarMesa();
-    renderizarMao();
-    atualizarVezVisual();
-});
-
-function renderizarNomes(nomes) {
-    nomes.forEach((nome, i) => {
-        const vista = (i - meuIdx + 4) % 4;
-        const el = document.getElementById(`name-${vista}`);
-        if (el) el.innerText = (i === meuIdx) ? `TU` : nome;
-    });
+    for (let i = 0; i < 4; i++) {
+        const el = document.getElementById(`name-${i}`);
+        if (!el) continue;
+        const idxReal = (i + meuIdx) % 4;
+        const p = estado.jogadores ? estado.jogadores.find(pj => pj.posicao === idxReal) : null;
+        el.innerText = p ? p.nome : "...";
+        
+        let style = "px-3 py-1 rounded-full text-[10px] sm:text-xs font-black shadow-lg transition-all ";
+        style += (estado.jogadorAtual === idxReal) ? "bg-yellow-500 text-black scale-110 z-50" : "bg-black/60 text-white border border-white/20";
+        
+        const pos = el.className.split(' ').filter(c => c.includes('absolute') || c.includes('top-') || c.includes('bottom-') || c.includes('left-') || c.includes('right-') || c.includes('translate') || c.includes('rotate'));
+        el.className = style + " " + pos.join(' ');
+    }
 }
 
 function renderizarMao() {
-    const div = document.getElementById('mao');
-    div.innerHTML = '';
-    
-    const screenWidth = window.innerWidth;
-    const cardSize = screenWidth < 384 ? 'w-11' : (screenWidth < 640 ? 'w-14' : 'w-20');
-    const overlap = screenWidth < 384 ? '-ml-2' : '-ml-5 sm:-ml-8';
+    const container = document.getElementById('minha-mao');
+    if(!container) return;
+    container.innerHTML = '';
+    maoLocal.sort((a, b) => a.naipe.localeCompare(b.naipe) || b.ordem - a.ordem);
+    const temNaipe = estado.naipePuxado && maoLocal.some(c => c.naipe === estado.naipePuxado);
 
-    maoLocal.forEach((c, i) => {
+    maoLocal.forEach((carta, index) => {
         const img = document.createElement('img');
-        img.src = `cartas/${c.imagem}`;
-        
-        const vez = (estado.jogadorAtual === meuIdx && estado.fase === 'jogando');
-        const temNaipe = estado.naipePuxado && maoLocal.some(card => card.naipe === estado.naipePuxado);
-        let pode = vez && (!estado.naipePuxado || c.naipe === estado.naipePuxado || !temNaipe);
+        img.src = `cartas/${carta.imagem}`;
+        const eMinhaVez = (estado.jogadorAtual === meuIdx && estado.fase === 'jogando');
+        const podeJogar = !temNaipe || carta.naipe === estado.naipePuxado;
 
-        img.className = `${cardSize} ${i === 0 || (screenWidth < 384 && i === 5) ? 'ml-0' : overlap} transition-all duration-200 rounded shadow-md bg-white 
-            ${pode ? 'cursor-pointer hover:-translate-y-4 sm:hover:-translate-y-8 z-10 ring-2 ring-yellow-400' : 'grayscale opacity-40'}`;
-        
-        if (pode) img.onclick = () => socket.emit('jogarCarta', { cartaId: c.id });
-        div.appendChild(img);
+        let cls = "w-16 sm:w-24 md:w-28 transition-all rounded-md shadow-lg ";
+        if (eMinhaVez && podeJogar) {
+            img.className = cls + "hover:-translate-y-10 cursor-pointer ring-2 ring-yellow-500 z-30 hover:z-50";
+            img.onclick = () => jogarCarta(carta.id);
+        } else {
+            img.className = cls + "grayscale opacity-50 cursor-not-allowed";
+        }
+        if (maoLocal[index+1] && maoLocal[index+1].naipe !== carta.naipe) img.classList.add('mr-4');
+        container.appendChild(img);
     });
 }
 
 function renderizarMesa() {
-    const mesa = document.getElementById('mesa');
-    mesa.querySelectorAll('.carta-jogada').forEach(c => c.remove());
-    
-    const cardSize = "w-11 xs:w-14 sm:w-16 md:w-20";
-    const layouts = [
-        "bottom-8 sm:bottom-12 left-1/2 -translate-x-1/2",           
-        "right-2 sm:right-6 top-1/2 -translate-y-1/2 rotate-90",  
-        "top-8 sm:top-12 left-1/2 -translate-x-1/2 rotate-180", 
-        "left-2 sm:left-6 top-1/2 -translate-y-1/2 -rotate-90"   
+    const mesa = document.getElementById('cartas-centro');
+    if(!mesa) return;
+    mesa.innerHTML = '';
+    const posMesa = [
+        "bottom-0 left-1/2 -translate-x-1/2 z-10",
+        "left-0 top-1/2 -translate-y-1/2 rotate-90",
+        "top-0 left-1/2 -translate-x-1/2",
+        "right-0 top-1/2 -translate-y-1/2 -rotate-90"
     ];
-
-    estado.cartasNaMesa.forEach((c, i) => {
-        if (!c) return;
-        const vista = (i - meuIdx + 4) % 4;
-        const img = document.createElement('img');
-        img.src = `cartas/${c.imagem}`;
-        img.className = `carta-jogada ${cardSize} absolute ${layouts[vista]} shadow-lg rounded bg-white transition-all`;
-        mesa.appendChild(img);
-    });
-}
-
-function atualizarVezVisual() {
-    for (let vista = 0; vista < 4; vista++) {
-        const indiceReal = (vista + meuIdx) % 4;
-        const el = document.getElementById(`name-${vista}`);
-        if (!el) continue;
-        const vezDeste = (estado.jogadorAtual === indiceReal && estado.fase === 'jogando');
-        el.className = el.className.split(' ').filter(c => !['bg-yellow-400', 'text-black', 'scale-110', 'ring-2', 'ring-yellow-200', 'bg-black/60', 'text-white/90'].includes(c)).join(' ');
-        if (vezDeste) {
-            el.className += " bg-yellow-400 text-black scale-110 ring-2 ring-yellow-200 font-black";
-        } else {
-            el.className += " bg-black/60 text-white/90 font-bold";
-        }
+    if (estado.cartasNaMesa) {
+        estado.cartasNaMesa.forEach((c, i) => {
+            if (!c) return;
+            const vista = (i - meuIdx + 4) % 4;
+            const img = document.createElement('img');
+            img.src = `cartas/${c.imagem}`;
+            img.className = `absolute w-12 sm:w-24 shadow-2xl rounded-md border border-white/10 ${posMesa[vista]}`;
+            mesa.appendChild(img);
+        });
     }
 }
-
-function escolherTrunfo(t) {
-    document.getElementById('modal-trunfo').classList.add('hidden');
-    socket.emit('escolherTrunfo', { escolha: t });
-}
-
-function confirmarCorte() {
-    const val = document.getElementById('corte-slider').value;
-    document.getElementById('modal-corte').classList.add('hidden');
-    socket.emit('cortarBaralho', { indice: parseInt(val) });
-}
-
-window.onresize = () => renderizarMao();
