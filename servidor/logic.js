@@ -11,7 +11,13 @@ export function criarBaralho() {
   const baralho = [];
   naipes.forEach(naipe => {
     VALORES_SUECA.forEach(v => {
-      baralho.push({ valor: v.nome, naipe, ordem: v.ordem, pontos: v.pontos, imagem: `${v.nome}_of_${naipe}.svg` });
+      baralho.push({ 
+        valor: v.nome, 
+        naipe, 
+        ordem: v.ordem, 
+        pontos: v.pontos, 
+        imagem: `${v.nome}_of_${naipe}.svg` 
+      });
     });
   });
   return baralho;
@@ -26,40 +32,63 @@ export function baralhar(cartas) {
   return b;
 }
 
-// FUNÇÃO DE CORTE (Faltava esta!)
 export function partirBaralho(baralho, posicao) {
-  const topo = baralho.slice(0, posicao);
-  const fundo = baralho.slice(posicao);
+  const p = parseInt(posicao);
+  const topo = baralho.slice(0, p);
+  const fundo = baralho.slice(p);
   return fundo.concat(topo); 
 }
 
 export function distribuir(baralho, escolha, quemDa) {
   const maos = [[], [], [], []];
   let cartas = [...baralho];
-  let trunfo = (escolha === 'primeira') ? cartas[0] : cartas[39];
   
+  let trunfo = (escolha === 'primeira') ? cartas[0] : cartas[39];
   const ordem = [(quemDa + 1) % 4, (quemDa + 2) % 4, (quemDa + 3) % 4, quemDa];
 
   ordem.forEach(idx => {
     const monte = cartas.splice(0, 10);
     maos[idx] = monte.map((c, i) => ({
-      ...c, id: `p${idx}-${i}-${Math.random().toString(36).substr(2, 5)}`
+      ...c, 
+      id: `p${idx}-${i}-${Math.random().toString(36).substr(2, 5)}`
     }));
   });
+  
   return { maos, trunfo };
 }
 
 export function determinarVencedor(mesa, trunfoNaipe, naipePuxado) {
-  let vencedor = 0, melhor = null;
+  let vencedorIdx = 0;
+  let melhorCarta = null;
+
   mesa.forEach((carta, i) => {
     if (!carta) return;
-    if (!melhor) { melhor = carta; vencedor = i; return; }
-    let ganha = (carta.naipe === trunfoNaipe && melhor.naipe !== trunfoNaipe) || 
-                (carta.naipe === melhor.naipe && carta.ordem > melhor.ordem) ||
-                (carta.naipe === naipePuxado && melhor.naipe !== trunfoNaipe && melhor.naipe !== naipePuxado);
-    if (ganha) { melhor = carta; vencedor = i; }
+    if (!melhorCarta) {
+      melhorCarta = carta;
+      vencedorIdx = i;
+      return;
+    }
+
+    const eTrunfo = carta.naipe === trunfoNaipe;
+    const melhorETrunfo = melhorCarta.naipe === trunfoNaipe;
+
+    if (eTrunfo && !melhorETrunfo) {
+      melhorCarta = carta;
+      vencedorIdx = i;
+    } else if (eTrunfo && melhorETrunfo) {
+      if (carta.ordem > melhorCarta.ordem) {
+        melhorCarta = carta;
+        vencedorIdx = i;
+      }
+    } else if (!eTrunfo && !melhorETrunfo && carta.naipe === naipePuxado) {
+      if (carta.ordem > melhorCarta.ordem) {
+        melhorCarta = carta;
+        vencedorIdx = i;
+      }
+    }
   });
-  return vencedor;
+
+  return vencedorIdx;
 }
 
 export function calcularPontos(mesa) {
