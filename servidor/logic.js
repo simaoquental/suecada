@@ -58,29 +58,30 @@ export function distribuir(baralho, escolha, quemDa, indiceCorte = 20) {
 
 export function determinarVencedor(mesa, trunfoNaipe, naipePuxado) {
   let vencedorIdx = 0;
-  let melhorCarta = null;
+  let melhorCarta = mesa[0];
 
   mesa.forEach((carta, i) => {
-    if (!carta) return;
-    if (!melhorCarta) {
-      melhorCarta = carta;
-      vencedorIdx = i;
-      return;
-    }
-    const eTrunfo = carta.naipe === trunfoNaipe;
+    if (!carta || i === 0) return;
+
+    const cartaETrunfo = carta.naipe === trunfoNaipe;
     const melhorETrunfo = melhorCarta.naipe === trunfoNaipe;
 
-    if (eTrunfo && !melhorETrunfo) {
+    if (cartaETrunfo && !melhorETrunfo) {
       melhorCarta = carta;
       vencedorIdx = i;
-    } else if (eTrunfo === melhorETrunfo) {
-      if (carta.naipe === melhorCarta.naipe) {
-        if (carta.ordem > melhorCarta.ordem) {
+    } 
+    else if (cartaETrunfo && melhorETrunfo) {
+      if (carta.ordem > melhorCarta.ordem) {
+        melhorCarta = carta;
+        vencedorIdx = i;
+      }
+    } 
+    else if (!cartaETrunfo && !melhorETrunfo) {
+      if (carta.naipe === naipePuxado) {
+        if (melhorCarta.naipe !== naipePuxado || carta.ordem > melhorCarta.ordem) {
           melhorCarta = carta;
           vencedorIdx = i;
         }
-      } else if (carta.naipe === naipePuxado && melhorCarta.naipe !== trunfoNaipe) {
-          // Mantém a melhor carta se a nova não for trunfo nem do naipe puxado
       }
     }
   });

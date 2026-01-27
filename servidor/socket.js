@@ -208,36 +208,37 @@ function processarJogada(io, salaId, pIdx, idCarta) {
 function resolverVaza(io, salaId) {
     const s = salas[salaId];
     if (!s) return;
+
     const vIdx = determinarVencedor(s.cartasNaMesa, s.trunfoNaipe, s.naipePuxado);
     const pts = calcularPontos(s.cartasNaMesa);
+
     if (vIdx === 0 || vIdx === 2) s.ptsNos += pts; else s.ptsEles += pts;
-    s.cartasNaMesa = [null, null, null, null]; s.naipePuxado = null; s.jogadorAtual = vIdx;
-    if (s.maos[0].length === 0) finalizarRodada(io, salaId);
-    else { io.to(salaId).emit('updateRoom', s); verificarBot(io, salaId); }
+
+    s.cartasNaMesa = [null, null, null, null];
+    s.naipePuxado = null;
+    s.jogadorAtual = vIdx;
+
+    if (s.maos[0].length === 0) {
+        finalizarRodada(io, salaId);
+    } else {
+        io.to(salaId).emit('updateRoom', s);
+        verificarBot(io, salaId);
+    }
 }
 
 async function finalizarRodada(io, salaId) {
     const s = salas[salaId];
     if (!s) return;
 
-    const pts = calcularPontos(s.cartasNaMesa);
-    const vencedorVaza = determinarVencedor(s.cartasNaMesa, s.trunfoNaipe, s.naipePuxado);
-    
-    if (vencedorVaza === 0 || vencedorVaza === 2) s.ptsNos += pts;
-    else s.ptsEles += pts;
-
-    s.cartasNaMesa = [null, null, null, null];
-    s.naipePuxado = null;
-    s.jogadorAtual = vencedorVaza;
-
-    if (s.maos[0].length === 0) {
-        if (s.ptsNos > 60) s.placarNos += (s.ptsNos > 90 ? 2 : 1);
-        else if (s.ptsEles > 60) s.placarEles += (s.ptsEles > 90 ? 2 : 1);
-        else { /* empate 60-60 não soma nada */ }
-
-        s.ptsNos = 0; s.ptsEles = 0;
-        s.fase = 'espera';
+    if (s.ptsNos > 60) {
+        s.placarNos += (s.ptsNos > 90 ? 2 : 1);
+    } else if (s.ptsEles > 60) {
+        s.placarEles += (s.ptsEles > 90 ? 2 : 1);
     }
+
+    s.ptsNos = 0; 
+    s.ptsEles = 0;
+    s.fase = 'espera';
 
     if (s.placarNos >= 4 || s.placarEles >= 4) {
         const vence = s.placarNos >= 4 ? 'nos' : 'eles';
@@ -266,13 +267,13 @@ async function finalizarRodada(io, salaId) {
         }, 5000);
 
     } else {
-        if (s.fase === 'espera') {
-            s.dadorIdx = (s.dadorIdx + 1) % 4;
-            setTimeout(() => prepararNovaRodada(io, salaId), 2000);
-        } else {
-            io.to(salaId).emit('updateRoom', s);
-            verificarBot(io, salaId);
-        }
+        s.dadorIdx = (s.dadorIdx + 1) % 4;
+        
+        io.to(salaId).emit('updateRoom', s);
+        
+        setTimeout(() => {
+            prepararNovaRodada(io, salaId);
+        }, 3000);
     }
 }
 
