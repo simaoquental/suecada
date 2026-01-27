@@ -23,44 +23,52 @@ socket.on('login', async (nome) => {
         enviarListaSalas(io);
     });
 
-    socket.on('joinRoom', async ({ salaId, nome }) => {
-      if (!nome || nome.trim() === "" || !salaId) {
-          return socket.emit('erroLogin', "Nome inválido ou sala não especificada.");
-      }
+    socket.on('joinRoom', async ({ salaId, nome, senha }) => {
+        if (!nome || nome.trim() === "" || !salaId) {
+            return socket.emit('erroLogin', "Dados inválidos.");
+        }
 
-      const nomeLimpo = nome.trim();
-      socket.nome = nomeLimpo;
-      socket.salaId = salaId;
+        const nomeLimpo = nome.trim();
+        socket.nome = nomeLimpo;
+        socket.salaId = salaId;
 
-      if (!salas[salaId]) {
-        salas[salaId] = { 
-            id: salaId, jogadores: [], dadorIdx: 0, placarNos: 0, placarEles: 0, 
-            ptsNos: 0, ptsEles: 0, fase: 'espera', cartasNaMesa: [null, null, null, null],
-            jogadorAtual: 0, trunfo: null, trunfoNaipe: null, naipePuxado: null, 
-            indiceCorte: 20, maos: [[], [], [], []], dbGameId: null 
-        };
-      }
-      
-      const s = salas[salaId];
+        if (!salas[salaId]) {
+            salas[salaId] = { 
+                id: salaId, 
+                senha: senha || null, 
+                jogadores: [], dadorIdx: 0, placarNos: 0, placarEles: 0, 
+                ptsNos: 0, ptsEles: 0, fase: 'espera', cartasNaMesa: [null, null, null, null],
+                jogadorAtual: 0, trunfo: null, trunfoNaipe: null, naipePuxado: null, 
+                indiceCorte: 20, maos: [[], [], [], []], dbGameId: null 
+            };
+        }
+        
+        const s = salas[salaId];
 
-      const jogadorExistente = s.jogadores.find(p => 
-          p.nome.toLowerCase() === nomeLimpo.toLowerCase() || 
-          p.nome.toLowerCase() === `bot ${nomeLimpo}`.toLowerCase()
-      );
+        // Verifica se é uma reconexão
+        const jogadorExistente = s.jogadores.find(p => 
+            p.nome.toLowerCase() === nomeLimpo.toLowerCase() || 
+            p.nome.toLowerCase() === `bot ${nomeLimpo}`.toLowerCase()
+        );
 
-      if (jogadorExistente) {
-          if (jogadorExistente.isBot || timeoutsDesconexao[`${salaId}-${nomeLimpo}`]) {
-              if (timeoutsDesconexao[`${salaId}-${nomeLimpo}`]) {
-                  clearTimeout(timeoutsDesconexao[`${salaId}-${nomeLimpo}`]);
-                  delete timeoutsDesconexao[`${salaId}-${nomeLimpo}`];
-              }
-              jogadorExistente.id = socket.id;
-              jogadorExistente.nome = nomeLimpo; 
-              jogadorExistente.isBot = false;
-              console.log(`♻️ Reconexão: ${nomeLimpo} voltou.`);
-          } else {
-              return socket.emit('erroLogin', "Este nome já está em uso nesta sala.");
-          }
+        // VALIDAÇÃO DE SENHA: Só valida se não for reconexão e a sala tiver senha
+        if (!jogadorExistente && s.senha && s.senha !== senha) {
+            return socket.emit('erroLogin', "Senha incorreta para esta mesa!");
+        }
+
+        if (jogadorExistente) {
+            if (jogadorExistente.isBot || timeoutsDesconexao[`${salaId}-${nomeLimpo}`]) {
+                if (timeoutsDesconexao[`${salaId}-${nomeLimpo}`]) {
+                    clearTimeout(timeoutsDesconexao[`${salaId}-${nomeLimpo}`]);
+                    delete timeoutsDesconexao[`${salaId}-${nomeLimpo}`];
+                }
+                jogadorExistente.id = socket.id;
+                jogadorExistente.nome = nomeLimpo; 
+                jogadorExistente.isBot = false;
+                console.log(`♻️ Reconexão: ${nomeLimpo} voltou.`);
+            } else {
+            return socket.emit('erroLogin', "Este nome já está em uso nesta sala.");
+        }
       } else if (s.jogadores.length < 4 && s.fase === 'espera') {
           s.jogadores.push({ id: socket.id, nome: nomeLimpo, posicao: s.jogadores.length, isBot: false });
       } else { 
@@ -306,7 +314,8 @@ function enviarListaSalas(io) {
             id: s.id,
             total: s.jogadores.length, 
             humanos: s.jogadores.filter(p => !p.isBot).length,
-            fase: s.fase 
+            fase: s.fase,
+            privada: !!s.senha 
         }));
     io.emit('listaSalas', lista);
 }
