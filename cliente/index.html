@@ -94,7 +94,7 @@
     <div id="screen-lobby" class="hidden fixed inset-0 z-[400] bg-black/95 flex flex-col items-center p-6 overflow-y-auto">
         <div class="w-full max-w-sm pt-10 space-y-6">
             <button onclick="logout()" class="w-full p-3 rounded-xl font-bold text-sm text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all uppercase tracking-widest">Sair da Conta</button>
-            <button onclick="criarSala()" class="bg-emerald-600 w-full p-6 rounded-2xl font-black text-xl shadow-lg hover:brightness-110 active:scale-95 transition-all">CRIAR NOVA MESA</button>
+            <button onclick="abrirModalCriar()" class="bg-emerald-600 w-full p-6 rounded-2xl font-black text-xl shadow-lg hover:brightness-110 active:scale-95 transition-all">CRIAR NOVA MESA</button>
             <div id="lista-salas" class="grid grid-cols-1 gap-3"></div>
             <div class="bg-white/5 rounded-3xl p-6 border border-white/10">
                 <h3 class="text-yellow-500 font-black text-center mb-4 uppercase text-xs tracking-widest">Top Jogadores</h3>
@@ -122,6 +122,35 @@
         </div>
     </div>
 
+    <div id="modal-criar-sala" class="hidden fixed inset-0 z-[600] bg-black/90 flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#052c1e] p-8 rounded-3xl border border-yellow-500/50 w-full max-w-xs text-center shadow-2xl">
+            <h2 class="text-yellow-500 font-black mb-6 uppercase italic tracking-widest">Configurar Mesa</h2>
+            <div class="flex flex-col gap-4">
+                <div class="flex bg-black/20 p-1 rounded-xl">
+                    <button onclick="setPrivacidade(false)" id="btn-pub" class="flex-1 py-3 rounded-lg font-black uppercase text-[10px] bg-yellow-500 text-black transition-all">Pública</button>
+                    <button onclick="setPrivacidade(true)" id="btn-priv" class="flex-1 py-3 rounded-lg font-black uppercase text-[10px] text-white/50 transition-all">Privada</button>
+                </div>
+                <input type="password" id="input-senha-sala" placeholder="Senha da Mesa" class="hidden bg-white/5 border border-white/10 p-4 rounded-xl text-center outline-none focus:border-yellow-500 text-white font-bold">
+                <button onclick="confirmarCriacao()" class="mt-2 py-4 bg-yellow-500 text-black font-black rounded-xl uppercase shadow-lg hover:scale-105 active:scale-95 transition-all">Criar Agora</button>
+                <button onclick="fecharModalCriar()" class="text-[10px] uppercase font-bold text-white/30 hover:text-white transition-all">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-entrar-senha" class="hidden fixed inset-0 z-[600] bg-black/90 flex items-center justify-center p-6 backdrop-blur-sm">
+    <div class="bg-[#052c1e] p-8 rounded-3xl border border-yellow-500/50 w-full max-w-xs text-center shadow-2xl">
+        <h2 class="text-yellow-500 font-black mb-2 uppercase italic tracking-tighter">Mesa Privada</h2>
+        <p class="text-[10px] text-white/50 mb-6 uppercase font-bold">Introduz a senha de acesso</p>
+        
+        <input type="password" id="input-senha-entrar" placeholder="SENHA" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-center outline-none focus:border-yellow-500 text-white font-bold mb-4">
+        
+        <div class="flex gap-2">
+            <button onclick="fecharModalSenha()" class="flex-1 py-3 text-[10px] uppercase font-bold text-white/30 hover:text-white">Cancelar</button>
+            <button onclick="confirmarEntradaSenha()" class="flex-1 py-3 bg-yellow-500 text-black font-black rounded-xl uppercase text-xs shadow-lg hover:scale-105 transition-all">Entrar</button>
+        </div>
+    </div>
+    </div>
     <script src="jogo.js"></script>
 </body>
 </html>
+

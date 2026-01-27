@@ -29,28 +29,26 @@ window.onload = () => {
 
 function configurarSocket() {
     socket.on('listaSalas', (salas) => {
-        const container = document.getElementById('lista-salas');
-        if (!container) return;
-        
-        container.innerHTML = salas.map(s => {
-            const cheia = s.total >= 4;
-            return `
-            <div onclick="${cheia ? "alert('Esta mesa está cheia!')" : `entrarNaSala('${s.id}')`}" 
-                 class="glass p-5 rounded-2xl flex justify-between items-center transition-all shadow-lg
-                 ${cheia ? 'opacity-40 grayscale cursor-not-allowed pointer-events-none' : 'hover:bg-white/10 cursor-pointer active:scale-95 border-white/5'}">
-                
-                <div class="flex flex-col text-left">
-                    <span class="text-[10px] font-black uppercase text-white/30 tracking-widest">Mesa</span>
-                    <span class="font-bold text-lg ${cheia ? 'text-white/50' : 'text-white'}">${s.id}</span>
-                    <span class="text-[9px] text-white/40">${s.humanos} Humano(s) jogando</span>
-                </div>
-
-                <div class="px-4 py-1 rounded-full text-[10px] font-black 
-                    ${cheia ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/20 text-emerald-500'}">
-                    ${cheia ? 'LOTADA' : `${s.total} / 4`}
-                </div>
-            </div>`;
-        }).join('') || '<div class="col-span-2 text-center py-10 opacity-20 font-bold uppercase tracking-widest">Cria uma mesa para começar!</div>';
+    const container = document.getElementById('lista-salas');
+    if (!container) return;
+    
+    container.innerHTML = salas.map(s => {
+        const cheia = s.total >= 4;
+        return `
+        <div onclick="${cheia ? "" : `verificarEntrada('${s.id}', ${s.privada})`}" 
+             class="glass p-5 rounded-2xl flex justify-between items-center transition-all 
+             ${cheia ? 'opacity-40 grayscale cursor-not-allowed' : 'hover:bg-white/10 cursor-pointer active:scale-95 border-white/5'}">
+            <div class="flex flex-col text-left">
+                <span class="text-[9px] font-black uppercase ${s.privada ? 'text-yellow-500/50' : 'text-white/30'}">
+                    Mesa ${s.privada ? 'Privada' : 'Pública'}
+                </span>
+                <span class="font-bold text-lg text-white">${s.id}</span>
+            </div>
+            <div class="px-4 py-1 rounded-full text-[10px] font-black ${cheia ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/20 text-emerald-500'}">
+                ${cheia ? 'LOTADA' : `${s.total} / 4`}
+            </div>
+        </div>`;
+    }).join('') || '<div class="col-span-2 text-center py-10 opacity-20 font-bold uppercase tracking-widest">Cria uma mesa para começar!</div>';
     });
 
     socket.on('updateRoom', (s) => {
@@ -176,7 +174,7 @@ function criarSala() {
     entrarNaSala(id);
 }
 
-function entrarNaSala(id) {
+function entrarNaSala(id, senha = null) {
     if (!id) return;
     minhaSala = id;
     localStorage.setItem('sueca_sala', id);
@@ -188,7 +186,7 @@ function entrarNaSala(id) {
     screenGame.style.display = 'flex';
     screenGame.classList.remove('hidden');
 
-    socket.emit('joinRoom', { salaId: id, nome: meuNome });
+    socket.emit('joinRoom', { salaId: id, nome: meuNome, senha: senha });
 }
 
 
@@ -341,3 +339,75 @@ function enviarTrunfoUI(escolha) {
     document.getElementById('modal-trunfo-ui').classList.add('hidden');
 }
 
+function abrirModalCriar() {
+    document.getElementById('modal-criar-sala').classList.remove('hidden');
+}
+
+function fecharModalCriar() {
+    document.getElementById('modal-criar-sala').classList.add('hidden');
+    document.getElementById('input-senha-sala').value = "";
+    setPrivacidade(false);
+
+}
+
+function setPrivacidade(privada) {
+    const input = document.getElementById('input-senha-sala');
+    const btnPriv = document.getElementById('btn-priv');
+    const btnPub = document.getElementById('btn-pub');
+    if (privada) {
+        input.classList.remove('hidden');
+        btnPriv.className = "flex-1 py-3 rounded-lg font-black uppercase text-[10px] bg-yellow-500 text-black transition-all";
+        btnPub.className = "flex-1 py-3 rounded-lg font-black uppercase text-[10px] text-white/50 transition-all";
+    } else {
+        input.classList.add('hidden');
+        btnPub.className = "flex-1 py-3 rounded-lg font-black uppercase text-[10px] bg-yellow-500 text-black transition-all";
+        btnPriv.className = "flex-1 py-3 rounded-lg font-black uppercase text-[10px] text-white/50 transition-all";
+    }
+
+}
+
+function confirmarCriacao() {
+
+    const id = "MESA-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+    const inputSenha = document.getElementById('input-senha-sala');
+    const senha = inputSenha.value;
+
+    if (!inputSenha.classList.contains('hidden') && !senha) {
+
+        alert("Define uma senha para a mesa !");
+        return;
+    }
+    entrarNaSala(id, senha);
+    fecharModalCriar();
+}
+
+let salaIdTentandoEntrar = null;
+
+function verificarEntrada(id, ehPrivada) {
+    if (ehPrivada) {
+        salaIdTentandoEntrar = id;
+        document.getElementById('modal-entrar-senha').classList.remove('hidden');
+        document.getElementById('input-senha-entrar').focus();
+    } else {
+        entrarNaSala(id);
+    }
+}
+
+function fecharModalSenha() {
+    document.getElementById('modal-entrar-senha').classList.add('hidden');
+    document.getElementById('input-senha-entrar').value = "";
+    salaIdTentandoEntrar = null;
+}
+
+function confirmarEntradaSenha() {
+    const senhaInput = document.getElementById('input-senha-entrar');
+    const senha = senhaInput.value;
+    
+    if (!senha) {
+        alert("Introduz a senha de acesso!");
+        return;
+    }
+    
+    entrarNaSala(salaIdTentandoEntrar, senha);
+    fecharModalSenha();
+}
