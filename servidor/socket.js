@@ -238,11 +238,19 @@ async function finalizarRodada(io, salaId) {
 
     s.ptsNos = 0; 
     s.ptsEles = 0;
+    s.cartasNaMesa = [null, null, null, null];
+    s.maos = [[], [], [], []];
     s.fase = 'espera';
+
+    io.to(salaId).emit('updateRoom', s);
 
     if (s.placarNos >= 4 || s.placarEles >= 4) {
         const vence = s.placarNos >= 4 ? 'nos' : 'eles';
-        io.to(salaId).emit('fimDeJogo', { vencedor: vence, placar: { nos: s.placarNos, eles: s.placarEles } });
+        
+        io.to(salaId).emit('fimDeJogo', { 
+            vencedor: vence, 
+            placar: { nos: s.placarNos, eles: s.placarEles } 
+        });
 
         if (s.dbGameId) {
             await dbm.finalizarJogoSQL(s.dbGameId);
@@ -261,15 +269,14 @@ async function finalizarRodada(io, salaId) {
         enviarRanking(io);
 
         setTimeout(() => {
+            io.to(salaId).emit('sairParaLobby'); 
+            
             delete salas[salaId];
-            io.to(salaId).emit('updateRoom', null);
             enviarListaSalas(io);
-        }, 5000);
+        }, 7000);
 
     } else {
         s.dadorIdx = (s.dadorIdx + 1) % 4;
-        
-        io.to(salaId).emit('updateRoom', s);
         
         setTimeout(() => {
             prepararNovaRodada(io, salaId);
