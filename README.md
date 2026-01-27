@@ -10,7 +10,7 @@ Passos para correr o programa:
 
 Para conectar em dispositicos da mesma rede:
 1 - ipconfig 
-2 - "[ip[:3000"
+2 - "[ip]:3000"
 
 Repositório das cartas:
 https://github.com/MattCain/svg-playing-cards
