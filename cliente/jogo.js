@@ -28,7 +28,6 @@ window.onload = () => {
 };
 
 function configurarSocket() {
-    // 1. Receber lista de salas no lobby
     socket.on('listaSalas', (salas) => {
         const container = document.getElementById('lista-salas');
         if (!container) return;
@@ -55,6 +54,7 @@ function configurarSocket() {
     });
 
     socket.on('updateRoom', (s) => {
+        if (!s) return;
         estado = s;
         if (s.id) {
             minhaSala = s.id;
@@ -72,14 +72,26 @@ function configurarSocket() {
         atualizarInterface();
     });
 
-   socket.on('finalDeJogoTotal', (dados) => {
-    alert(dados.mensagem);
-    
-    localStorage.removeItem('sueca_sala');
-    minhaSala = "";
-    
-    irParaLobby(true);
-});
+    socket.on('sairParaLobby', () => {
+        console.log("Jogo finalizado. A regressar ao lobby...");
+        localStorage.removeItem('sueca_sala');
+        minhaSala = "";
+        
+        document.getElementById('minha-mao').innerHTML = "";
+        [0, 1, 2, 3].forEach(i => {
+            const slot = document.getElementById(`slot-${i}`);
+            if (slot) slot.innerHTML = "";
+        });
+
+        irParaLobby(true);
+    });
+
+    socket.on('finalDeJogoTotal', (dados) => {
+        alert(dados.mensagem);
+        localStorage.removeItem('sueca_sala');
+        minhaSala = "";
+        irParaLobby(true);
+    });
 
     socket.on('suaMao', (cartas) => { 
         maoLocal = cartas; 
@@ -119,6 +131,11 @@ function configurarSocket() {
                 <span class="flex-1 ml-3 font-bold text-sm">${r.nome}</span>
                 <span class="text-yellow-500 font-black text-sm">${r.vitorias} 🏆</span>
             </div>`).join('');
+    });
+
+    socket.on('fimDeJogo', (dados) => {
+        const venceu = dados.vencedor === 'nos';
+        console.log("Fim da partida. Vencedor:", dados.vencedor);
     });
 }
 
