@@ -7,80 +7,117 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass { background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.1); }
     </style>
 </head>
 <body class="bg-[#052c1e] bg-[radial-gradient(circle,_#065f46_0%,_#052c1e_100%)] text-white h-[100dvh] flex flex-col items-center overflow-hidden select-none">
 
-    <header id="placar" class="hidden w-full max-w-4xl flex flex-col items-center p-2 sm:p-4 z-50">
-        <div class="mb-1 sm:mb-2 bg-yellow-500/20 border border-yellow-500/50 px-3 py-0.5 rounded-full">
-            <span class="text-[8px] sm:text-[10px] font-bold text-yellow-500 uppercase">Sala:</span>
-            <span id="display-id" class="text-xs sm:text-sm font-mono font-black text-white ml-2">-----</span>
-        </div>
-        <div class="w-full flex items-center justify-between gap-2 px-2">
-            <div class="flex-1 bg-black/40 p-1 sm:p-2 rounded-xl sm:rounded-2xl flex justify-around border border-white/10">
-                <div class="text-center"><span class="block text-[8px] sm:text-[10px] text-emerald-400">NÓS</span><span id="pontos-nos" class="text-lg sm:text-xl font-black">0</span></div>
-                <div class="text-center"><span class="block text-[8px] sm:text-[10px] text-red-400">ELES</span><span id="pontos-eles" class="text-lg sm:text-xl font-black">0</span></div>
-            </div>
-            
-            <div id="display-trunfo" class="w-10 h-14 sm:w-12 sm:h-16 bg-white/10 rounded-lg flex items-center justify-center text-2xl shadow-inner border border-white/20">?</div>
-            
-            <div class="flex-1 bg-black/40 p-1 sm:p-2 rounded-xl sm:rounded-2xl flex justify-around border border-white/10">
-                <div class="text-center"><span class="block text-[8px] sm:text-[10px] text-yellow-500">JOGOS N</span><span id="placar-nos" class="text-lg sm:text-xl font-black">0</span></div>
-                <div class="text-center"><span class="block text-[8px] sm:text-[10px] text-yellow-500">JOGOS E</span><span id="placar-eles" class="text-lg sm:text-xl font-black">0</span></div>
-            </div>
-        </div>
-    </header>
-
-    <main class="relative flex-1 w-full max-w-4xl">
-        <div id="name-0" class="absolute bottom-2 left-1/2 -translate-x-1/2 z-40"></div>
-        <div id="name-1" class="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 -rotate-90 z-40"></div>
-        <div id="name-2" class="absolute top-2 left-1/2 -translate-x-1/2 z-40"></div>
-        <div id="name-3" class="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 rotate-90 z-40"></div>
+    <div id="screen-game" class="hidden fixed inset-0 flex flex-col items-center z-10">
         
-        <div id="cartas-centro" class="absolute inset-16 sm:inset-28 flex items-center justify-center pointer-events-none"></div>
-    </main>
+        <header class="w-full max-w-4xl flex flex-col items-center p-2 sm:p-4 z-50">
+    <div class="w-full flex justify-between items-center mb-4 px-2">
+        <button onclick="sairDaMesa()" class="glass px-3 py-2 rounded-xl text-red-400 hover:bg-red-500/20 transition-all flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            <span class="text-[10px] font-black uppercase text-white hidden sm:inline">Sair</span>
+        </button>
 
-    <footer class="w-full pb-4 sm:pb-8 overflow-x-auto no-scrollbar">
-        <div id="minha-mao" class="flex justify-center -space-x-8 sm:-space-x-12 min-w-max px-10"></div>
-    </footer>
+        <h1 class="text-xl sm:text-2xl font-black text-yellow-500 italic tracking-tighter">SUECADA</h1>
+
+        <div class="bg-yellow-500/10 border border-yellow-500/30 px-3 py-1 rounded-full flex items-center gap-2">
+            <span class="text-[9px] font-bold text-yellow-500 uppercase opacity-70">Mesa:</span>
+            <span id="room-id-header" class="text-xs sm:text-sm font-mono font-black text-white">#----</span>
+        </div>
+    </div>
+
+    <div class="w-full flex items-center justify-between gap-4 px-2">
+        <div class="flex-1 glass p-2 rounded-2xl flex justify-around items-center border-emerald-500/30">
+            <div class="text-center">
+                <span class="block text-[9px] text-emerald-400 font-bold uppercase tracking-widest">Nós</span>
+                <div class="flex items-baseline justify-center gap-1">
+                    <span id="vitorias-nos" class="text-xl font-black">0</span>
+                    <span id="pontos-nos" class="text-[10px] text-emerald-400/60 font-bold">0 pts</span>
+                </div>
+            </div>
+            <div class="h-8 w-[1px] bg-white/10"></div>
+            <div class="text-center">
+                <span class="block text-[9px] text-red-400 font-bold uppercase tracking-widest">Eles</span>
+                <div class="flex items-baseline justify-center gap-1">
+                    <span id="vitorias-eles" class="text-xl font-black">0</span>
+                    <span id="pontos-eles" class="text-[10px] text-red-400/60 font-bold">0 pts</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="trunfo-display" class="w-12 h-16 bg-white/5 rounded-xl flex items-center justify-center text-3xl shadow-2xl border border-white/10 ring-1 ring-white/5">
+            ?
+        </div>
+    </div>
+</header>
+
+        <main class="relative flex-1 w-full max-w-4xl">
+            <div class="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                <div id="nome-2" class="text-[10px] font-bold uppercase bg-black/40 px-3 py-1 rounded-full mb-2">...</div>
+                <div id="slot-2" class="w-16 h-24 sm:w-20 sm:h-28"></div>
+            </div>
+            <div class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                <div id="nome-1" class="text-[9px] font-bold uppercase bg-black/40 px-3 py-1 rounded-full mb-2 -rotate-90">...</div>
+                <div id="slot-1" class="w-16 h-24 sm:w-20 sm:h-28"></div>
+            </div>
+            <div class="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                <div id="nome-3" class="text-[9px] font-bold uppercase bg-black/40 px-3 py-1 rounded-full mb-2 rotate-90">...</div>
+                <div id="slot-3" class="w-16 h-24 sm:w-20 sm:h-28"></div>
+            </div>
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col-reverse items-center">
+                <div id="nome-0" class="text-[10px] font-black uppercase text-yellow-500 mt-2">TU</div>
+                <div id="slot-0" class="w-20 h-28 sm:w-24 sm:h-32"></div>
+            </div>
+        </main>
+
+        <footer class="w-full pb-8 overflow-x-auto no-scrollbar relative">
+            <div id="minha-mao" class="flex justify-center -space-x-8 sm:-space-x-12 min-w-max px-10"></div>
+        </footer>
+
+        <button id="btn-add-bot" onclick="adicionarBot()" 
+            class="hidden fixed bottom-6 right-6 bg-yellow-500 text-black px-6 py-4 rounded-2xl shadow-2xl font-black text-xs hover:scale-105 active:scale-95 transition-all z-[100] border-b-4 border-yellow-700">+ BOT</button>
+    </div>
 
     <div id="screen-home" class="fixed inset-0 z-[500] bg-[#052c1e] flex flex-col items-center justify-center p-6">
-        <h1 class="text-4xl sm:text-6xl font-black text-yellow-500 mb-8 italic">SUECADA</h1>
-        <input type="text" id="input-name" placeholder="Teu Nome" class="bg-white/10 border border-white/20 p-4 rounded-xl mb-4 text-center text-white outline-none focus:border-yellow-500 w-full max-w-xs">
-        <button onclick="irParaLobby()" class="bg-yellow-500 text-black font-black px-12 py-4 rounded-xl shadow-xl uppercase w-full max-w-xs">Entrar</button>
+        <h1 class="text-5xl font-black text-yellow-500 mb-8 italic">SUECADA</h1>
+        <input type="text" id="input-name" placeholder="Teu Nome" class="bg-white/10 border border-white/20 p-4 rounded-xl mb-4 text-center text-white outline-none focus:border-yellow-500 w-full max-w-xs text-xl font-bold">
+        <button onclick="irParaLobby()" class="bg-yellow-500 text-black font-black px-12 py-4 rounded-xl shadow-xl uppercase w-full max-w-xs hover:brightness-110 transition-all">Entrar</button>
     </div>
 
-    <div id="screen-lobby" class="hidden fixed inset-0 z-[400] bg-black/95 flex flex-col items-center justify-start p-6 overflow-y-auto">
-        <div class="w-full max-w-xs pt-10">
-            <button onclick="criarSala()" class="bg-emerald-600 w-full p-6 rounded-2xl font-black text-xl mb-4 shadow-lg">CRIAR MESA</button>
-            <div class="flex flex-col mb-8">
-                <input type="text" id="input-room-id" placeholder="CÓDIGO" class="bg-white/10 p-4 rounded-t-xl text-center text-2xl uppercase border-b border-white/10">
-                <button onclick="entrarNaSala()" class="bg-white/10 p-4 rounded-b-xl font-bold uppercase">ENTRAR NA MESA</button>
-            </div>
+    <div id="screen-lobby" class="hidden fixed inset-0 z-[400] bg-black/95 flex flex-col items-center p-6 overflow-y-auto">
+        <div class="w-full max-w-sm pt-10 space-y-6">
+            <button onclick="logout()" class="w-full p-3 rounded-xl font-bold text-sm text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all uppercase tracking-widest">Sair da Conta</button>
+            <button onclick="criarSala()" class="bg-emerald-600 w-full p-6 rounded-2xl font-black text-xl shadow-lg hover:brightness-110 active:scale-95 transition-all">CRIAR NOVA MESA</button>
+            <div id="lista-salas" class="grid grid-cols-1 gap-3"></div>
             <div class="bg-white/5 rounded-3xl p-6 border border-white/10">
-                <h3 class="text-yellow-500 font-black text-center mb-4 uppercase tracking-widest text-xs">Top Jogadores</h3>
-                <div id="ranking-list" class="space-y-3"></div>
+                <h3 class="text-yellow-500 font-black text-center mb-4 uppercase text-xs tracking-widest">Top Jogadores</h3>
+                <div id="lista-ranking" class="space-y-2"></div>
             </div>
         </div>
     </div>
 
-    <div id="modal-corte" class="hidden fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-6 text-center">
-        <div class="bg-emerald-900 p-8 rounded-3xl border border-yellow-500 w-full max-w-xs">
-            <h2 class="text-yellow-500 font-black mb-2 uppercase">Partir</h2>
-            <div id="corte-numero" class="text-5xl font-black mb-4">20</div>
-            <input type="range" id="corte-slider" min="1" max="39" oninput="document.getElementById('corte-numero').innerText=this.value" class="w-full h-2 accent-yellow-500">
-            <button onclick="confirmarCorte()" class="w-full mt-6 py-4 bg-yellow-500 text-black font-black rounded-xl uppercase">Confirmar</button>
+    <div id="modal-corte-ui" class="hidden fixed inset-0 z-[600] bg-black/80 flex items-center justify-center p-6">
+        <div class="bg-emerald-900 p-8 rounded-3xl border border-yellow-500 w-full max-w-xs text-center">
+            <h2 class="text-yellow-500 font-black mb-2 uppercase">Partir o Baralho</h2>
+            <div id="corte-num-ui" class="text-6xl font-black mb-4">20</div>
+            <input type="range" min="1" max="39" value="20" oninput="document.getElementById('corte-num-ui').innerText=this.value" id="slider-corte" class="w-full h-2 accent-yellow-500 mb-6">
+            <button onclick="enviarCorteUI()" class="w-full py-4 bg-yellow-500 text-black font-black rounded-xl uppercase">Confirmar</button>
         </div>
     </div>
 
-    <div id="modal-trunfo" class="hidden fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-6 text-center">
-        <div class="bg-emerald-900 p-6 rounded-3xl border border-yellow-500 w-full max-w-xs">
+    <div id="modal-trunfo-ui" class="hidden fixed inset-0 z-[600] bg-black/80 flex items-center justify-center p-6">
+        <div class="bg-emerald-900 p-8 rounded-3xl border border-yellow-500 w-full max-w-xs text-center">
             <h2 class="text-yellow-500 font-black mb-6 uppercase">Escolher Trunfo</h2>
             <div class="grid grid-cols-2 gap-4">
-                <button onclick="escolherTrunfo('Cima')" class="bg-white/10 p-4 rounded-xl font-bold uppercase">Cima</button>
-                <button onclick="escolherTrunfo('Baixo')" class="bg-white/10 p-4 rounded-xl font-bold uppercase">Baixo</button>
+                <button onclick="enviarTrunfoUI('Cima')" class="bg-white/10 py-4 rounded-xl font-bold uppercase hover:bg-yellow-500 hover:text-black transition-all">Cima</button>
+                <button onclick="enviarTrunfoUI('Baixo')" class="bg-white/10 py-4 rounded-xl font-bold uppercase hover:bg-yellow-500 hover:text-black transition-all">Baixo</button>
             </div>
         </div>
     </div>
