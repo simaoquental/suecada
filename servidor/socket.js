@@ -1,168 +1,333 @@
-import { criarBaralho, baralhar, partirBaralho, distribuir, determinarVencedor, calcularPontos } from './logic.js';
+import { criarBaralho, baralhar, distribuir, determinarVencedor, calcularPontos } from './logic.js';
 import * as dbm from './gameManager.js';
 
 let salas = {};
+let timeoutsDesconexao = {}; 
 
 export function setupSockets(io) {
   io.on('connection', socket => {
 
-    socket.on('pedirRanking', async () => {
-        const r = await dbm.obterRanking();
-        socket.emit('listaRanking', r);
-    });
+    // --- LOGIN E RANKING ---
+socket.on('login', async (nome) => {
+    // Verifica se o nome é válido (não vazio e não apenas espaços)
+    if (!nome || nome.trim().length === 0) {
+        return socket.emit('erroLogin', "Por favor, escolhe um nome de utilizador válido.");
+    }
     
+    // Limpa espaços extras (ex: "  João  " vira "João")
+    const nomeLimpo = nome.trim();
+    socket.nome = nomeLimpo;
+    
+    await dbm.obterOuCriarUtilizador(nomeLimpo);
+    enviarRanking(io);
+});
+
+    // --- GESTÃO DE SALAS ---
+    socket.on('pedirSalas', () => { 
+        enviarListaSalas(io);
+    });
+
     socket.on('joinRoom', async ({ salaId, nome }) => {
+      // 1. Validação de nome (vazio ou espaços)
+      if (!nome || nome.trim() === "" || !salaId) {
+          return socket.emit('erroLogin', "Nome inválido ou sala não especificada.");
+      }
+
       const nomeLimpo = nome.trim();
+      socket.nome = nomeLimpo;
+      socket.salaId = salaId;
+
+      // Inicializa a sala se não existir
       if (!salas[salaId]) {
         salas[salaId] = { 
-          jogadores: [], dadorIdx: 0, placarNos: 0, placarEles: 0, ptsNos: 0, ptsEles: 0, 
-          fase: 'espera', cartasNaMesa: [null, null, null, null], naipePuxado: null 
+            id: salaId, jogadores: [], dadorIdx: 0, placarNos: 0, placarEles: 0, 
+            ptsNos: 0, ptsEles: 0, fase: 'espera', cartasNaMesa: [null, null, null, null],
+            jogadorAtual: 0, trunfo: null, trunfoNaipe: null, naipePuxado: null, 
+            indiceCorte: 20, maos: [[], [], [], []], dbGameId: null 
         };
       }
+      
       const s = salas[salaId];
-      const nomeExiste = s.jogadores.find(p => p.nome.toLowerCase() === nomeLimpo.toLowerCase());
-      if (nomeExiste) {
-        socket.emit('erro', { msg: "Já existe um jogador com esse nome nesta mesa!" });
-        return; 
+
+      // 2. Verificação de Duplicados e Reconexão
+      const jogadorExistente = s.jogadores.find(p => 
+          p.nome.toLowerCase() === nomeLimpo.toLowerCase() || 
+          p.nome.toLowerCase() === `bot ${nomeLimpo}`.toLowerCase()
+      );
+
+      if (jogadorExistente) {
+          // Se for BOT ou estiver em timeout, é reconexão
+          if (jogadorExistente.isBot || timeoutsDesconexao[`${salaId}-${nomeLimpo}`]) {
+              if (timeoutsDesconexao[`${salaId}-${nomeLimpo}`]) {
+                  clearTimeout(timeoutsDesconexao[`${salaId}-${nomeLimpo}`]);
+                  delete timeoutsDesconexao[`${salaId}-${nomeLimpo}`];
+              }
+              jogadorExistente.id = socket.id;
+              jogadorExistente.nome = nomeLimpo; 
+              jogadorExistente.isBot = false;
+              console.log(`♻️ Reconexão: ${nomeLimpo} voltou.`);
+          } else {
+              return socket.emit('erroLogin', "Este nome já está em uso nesta sala.");
+          }
+      } else if (s.jogadores.length < 4 && s.fase === 'espera') {
+          s.jogadores.push({ id: socket.id, nome: nomeLimpo, posicao: s.jogadores.length, isBot: false });
+      } else { 
+          return socket.emit('erroLogin', "Mesa cheia ou jogo já iniciado."); 
       }
-      if (s.jogadores.length < 4 && s.fase === 'espera') {
-        const uId = await dbm.obterOuCriarUtilizador(nomeLimpo);
-        socket.userIdDb = uId;
-        socket.salaId = salaId;
-        const pos = s.jogadores.length;
-        s.jogadores.push({ id: socket.id, dbId: uId, nome: nomeLimpo, posicao: pos });
-        socket.join(salaId);
-        socket.emit('init', { jogadorIndex: pos, salaId });
-        if (s.jogadores.length === 4) iniciarNovaPartida(io, salaId);
-        else io.to(salaId).emit('estadoPublico', obterEstado(s));
-      } else {
-        socket.emit('erro', { msg: "A mesa está cheia ou o jogo já começou!" });
+
+      socket.join(salaId);
+      io.to(salaId).emit('updateRoom', s);
+      
+      // Se houver jogo a decorrer, envia a mão
+      if (jogadorExistente && s.maos[jogadorExistente.posicao]?.length > 0) {
+          socket.emit('suaMao', s.maos[jogadorExistente.posicao]);
       }
+
+      // 3. SE A MESA FICAR CHEIA: Grava no SQL e Inicia
+      if (s.jogadores.length === 4 && s.fase === 'espera') {
+          try {
+              // Regista o início do jogo nas tabelas 'games' e 'game_players'
+              s.dbGameId = await dbm.registarInicioJogo(s.jogadores);
+              prepararNovaRodada(io, salaId);
+          } catch (err) {
+              console.error("Erro ao iniciar jogo no SQL:", err);
+              // Mesmo com erro no SQL, o jogo inicia para não travar os jogadores
+              prepararNovaRodada(io, salaId);
+          }
+      }
+
+      enviarListaSalas(io);
     });
 
-    socket.on('cortar', data => {
-      const s = salas[socket.salaId];
-      if (!s || s.fase !== 'corte') return;
-      s.baralho = partirBaralho(s.baralho, parseInt(data.posicao));
-      s.fase = 'escolha_trunfo';
-      io.to(socket.salaId).emit('solicitarTrunfo', { quemEscolhe: s.dadorIdx });
-      io.to(socket.salaId).emit('estadoPublico', obterEstado(s));
-    });
-
-    socket.on('escolherTrunfo', data => {
-      const s = salas[socket.salaId];
-      if (!s || s.fase !== 'escolha_trunfo') return;
-      const { maos, trunfo } = distribuir(s.baralho, data.escolha, s.dadorIdx);
-      s.maos = maos;
-      s.trunfo = trunfo;
-      s.trunfoNaipe = trunfo.naipe;
-      s.fase = 'jogando';
-      s.jogadorAtual = (s.dadorIdx + 1) % 4;
-      s.jogadores.forEach(p => {
-        io.to(p.id).emit('suaMao', s.maos[p.posicao]);
-      });
-      io.to(socket.salaId).emit('estadoPublico', obterEstado(s));
-    });
-
-    socket.on('jogarCarta', data => {
-      const s = salas[socket.salaId];
-      if (!s || s.fase !== 'jogando') return;
-      
-      const pIdx = s.jogadores.find(p => p.id === socket.id)?.posicao;
-      if (pIdx !== s.jogadorAtual) return;
-
-      const maoDoJogador = s.maos[pIdx];
-      const cartaIdx = maoDoJogador.findIndex(c => c.id === data.cartaId);
-      if (cartaIdx === -1) return;
-
-      const carta = maoDoJogador[cartaIdx];
-      
-      const temNaipe = maoDoJogador.some(c => c.naipe === s.naipePuxado);
-      if (s.naipePuxado && carta.naipe !== s.naipePuxado && temNaipe) return;
-
-      if (!s.naipePuxado) s.naipePuxado = carta.naipe;
-      
-      s.cartasNaMesa[pIdx] = carta;
-      maoDoJogador.splice(cartaIdx, 1); 
-      
-      socket.emit('suaMao', maoDoJogador);
-      
-      if (s.cartasNaMesa.filter(c => c !== null).length === 4) {
-        s.jogadorAtual = -1;
-        io.to(socket.salaId).emit('estadoPublico', obterEstado(s));
-        setTimeout(() => finalizarVaza(io, socket.salaId), 1500);
-      } else {
-        s.jogadorAtual = (s.jogadorAtual + 1) % 4;
-        io.to(socket.salaId).emit('estadoPublico', obterEstado(s));
-      }
+    // --- SAÍDAS E DESCONEXÕES ---
+    socket.on('leaveRoom', () => {
+        executarSaida(io, socket);
     });
 
     socket.on('disconnect', () => {
-      const s = salas[socket.salaId];
-      if (s && s.fase === 'espera') {
-        s.jogadores = s.jogadores.filter(p => p.id !== socket.id);
-        s.jogadores.forEach((p, i) => p.posicao = i);
-        io.to(socket.salaId).emit('estadoPublico', obterEstado(s));
-      }
+        const { salaId, nome } = socket;
+        if (salaId && nome && salas[salaId]) {
+            // Aguarda 10 segundos (mais rápido que os 20 anteriores para evitar "fantasmas")
+            timeoutsDesconexao[`${salaId}-${nome}`] = setTimeout(() => {
+                executarSaida(io, socket);
+            }, 10000);
+        }
+    });
+
+    // --- LÓGICA DO JOGO ---
+    socket.on('addBot', () => {
+        const s = salas[socket.salaId];
+        if (s && s.jogadores.length < 4 && s.fase === 'espera') {
+            const botNome = `Bot_${Math.floor(Math.random() * 999)}`;
+            s.jogadores.push({ id: `bot_${Date.now()}`, nome: botNome, posicao: s.jogadores.length, isBot: true });
+            io.to(socket.salaId).emit('updateRoom', s);
+            if (s.jogadores.length === 4) prepararNovaRodada(io, socket.salaId);
+            enviarListaSalas(io);
+        }
+    });
+
+    socket.on('corteFeito', (v) => {
+        const s = salas[socket.salaId];
+        if (!s || s.fase !== 'cortando') return;
+        s.indiceCorte = parseInt(v);
+        s.fase = 'escolhendo_trunfo';
+        io.to(socket.salaId).emit('updateRoom', s);
+        const d = s.jogadores.find(p => p.posicao === s.dadorIdx);
+        if (d?.isBot) setTimeout(() => processarTrunfo(io, socket.salaId, 'primeira'), 1000);
+        else if (d) io.to(d.id).emit('pedirTrunfo');
+    });
+
+    socket.on('trunfoEscolhido', (e) => processarTrunfo(io, socket.salaId, e));
+
+    socket.on('jogarCarta', ({ idCarta }) => {
+        const s = salas[socket.salaId];
+        if (!s || s.fase !== 'jogando') return;
+        const p = s.jogadores.find(px => px.id === socket.id); // Busca por ID é mais seguro
+        if (p && p.posicao === s.jogadorAtual) processarJogada(io, socket.salaId, p.posicao, idCarta);
     });
   });
 }
 
-function iniciarNovaPartida(io, salaId) {
-  const s = salas[salaId];
-  s.baralho = baralhar(criarBaralho());
-  s.fase = 'corte';
-  s.ptsNos = 0; s.ptsEles = 0; s.rodada = 0;
-  s.cartasNaMesa = [null, null, null, null];
-  const quemCorta = (s.dadorIdx + 2) % 4;
-  io.to(salaId).emit('solicitarCorte', { quemCorta });
-  io.to(salaId).emit('estadoPublico', obterEstado(s));
-}
+function executarSaida(io, socket) {
+    const { salaId, nome } = socket;
+    if (!salaId || !salas[salaId]) return;
 
-function obterEstado(s) {
-  return {
-    fase: s.fase,
-    jogadores: s.jogadores.map(p => ({ nome: p.nome, posicao: p.posicao })),
-    jogadorAtual: s.jogadorAtual,
-    cartasNaMesa: s.cartasNaMesa,
-    trunfo: s.trunfo,
-    naipePuxado: s.naipePuxado,
-    ptsNos: s.ptsNos,
-    ptsEles: s.ptsEles,
-    placarNos: s.placarNos,
-    placarEles: s.placarEles
-  };
-}
+    const s = salas[salaId];
+    // Se quem sai é o Host (primeiro jogador) ou se não sobrar nenhum humano real
+    const eHost = s.jogadores[0] && s.jogadores[0].nome === nome;
+    const apenasBotsRestantes = s.jogadores.every(p => p.isBot || p.nome === nome);
 
-async function finalizarVaza(io, salaId) {
-  const s = salas[salaId];
-  if (!s) return;
-  const vIdx = determinarVencedor(s.cartasNaMesa, s.trunfoNaipe, s.naipePuxado);
-  const pts = calcularPontos(s.cartasNaMesa);
-  (vIdx === 0 || vIdx === 2) ? s.ptsNos += pts : s.ptsEles += pts;
-  s.cartasNaMesa = [null, null, null, null]; s.naipePuxado = null; s.jogadorAtual = vIdx; s.rodada++;
-
-  if (s.rodada === 10) {
-    if (s.ptsNos === 120) s.placarNos += 4;
-    else if (s.ptsNos > 60 && s.ptsEles < 30) s.placarNos += 2;
-    else if (s.ptsNos > 60) s.placarNos += 1;
-    else if (s.ptsEles === 120) s.placarEles += 4;
-    else if (s.ptsEles > 60 && s.ptsNos < 30) s.placarEles += 2;
-    else if (s.ptsEles > 60) s.placarEles += 1;
-
-    if (s.placarNos >= 4 || s.placarEles >= 4) {
-      const venceuNos = s.placarNos >= 4;
-      for (const p of s.jogadores) {
-        const venceu = (p.posicao === 0 || p.posicao === 2) ? venceuNos : !venceuNos;
-        await dbm.atualizarEstatisticas(p.dbId, venceu);
-      }
-      io.to(salaId).emit('fimDeJogo', { msg: venceuNos ? "NÓS GANHÁMOS!" : "ELES GANHARAM!" });
-      delete salas[salaId];
+    if (eHost || apenasBotsRestantes) {
+        io.to(salaId).emit('mesaEncerrada', "A mesa foi desfeita.");
+        delete salas[salaId];
     } else {
-      s.dadorIdx = (s.dadorIdx + 1) % 4;
-      iniciarNovaPartida(io, salaId);
+        const p = s.jogadores.find(jp => jp.nome === nome);
+        if (p && !p.isBot) {
+            p.isBot = true;
+            p.nome = `BOT ${p.nome}`;
+            io.to(salaId).emit('updateRoom', s);
+            verificarBot(io, salaId);
+        }
     }
-  } else {
-    io.to(salaId).emit('estadoPublico', obterEstado(s));
-  }
+    socket.leave(salaId);
+    enviarListaSalas(io);
+}
+
+function prepararNovaRodada(io, salaId) {
+    const s = salas[salaId];
+    if (!s) return;
+    s.fase = 'cortando';
+    s.baralho = baralhar(criarBaralho());
+    io.to(salaId).emit('updateRoom', s);
+    const cIdx = (s.dadorIdx + 3) % 4;
+    const c = s.jogadores.find(p => p.posicao === cIdx);
+    if (c?.isBot) {
+        setTimeout(() => {
+            s.indiceCorte = 20; s.fase = 'escolhendo_trunfo';
+            io.to(salaId).emit('updateRoom', s);
+            const d = s.jogadores.find(p => p.posicao === s.dadorIdx);
+            if (d?.isBot) processarTrunfo(io, salaId, 'primeira');
+            else if (d) io.to(d.id).emit('pedirTrunfo');
+        }, 1000);
+    } else if (c) io.to(c.id).emit('pedirCorte');
+}
+
+function processarTrunfo(io, salaId, escolha) {
+    const s = salas[salaId];
+    if (!s) return;
+    const { maos, trunfo } = distribuir(s.baralho, escolha, s.dadorIdx, s.indiceCorte);
+    s.maos = maos; s.trunfo = trunfo; s.trunfoNaipe = trunfo.naipe;
+    s.fase = 'jogando'; s.jogadorAtual = (s.dadorIdx + 1) % 4;
+    s.ptsNos = 0; s.ptsEles = 0; s.cartasNaMesa = [null, null, null, null]; s.naipePuxado = null;
+    s.jogadores.forEach(p => { if (!p.isBot) io.to(p.id).emit('suaMao', s.maos[p.posicao]); });
+    io.to(salaId).emit('updateRoom', s);
+    verificarBot(io, salaId);
+}
+
+function processarJogada(io, salaId, pIdx, idCarta) {
+    const s = salas[salaId];
+    if (!s) return;
+    const mao = s.maos[pIdx];
+    const cIdx = mao.findIndex(c => c.id === idCarta);
+    if (cIdx === -1) return;
+    const carta = mao[cIdx];
+    const temNaipe = mao.some(c => c.naipe === s.naipePuxado);
+    if (s.naipePuxado && carta.naipe !== s.naipePuxado && temNaipe) return;
+    if (!s.naipePuxado) s.naipePuxado = carta.naipe;
+    s.cartasNaMesa[pIdx] = mao.splice(cIdx, 1)[0];
+    s.jogadorAtual = (s.jogadorAtual + 1) % 4;
+    io.to(salaId).emit('updateRoom', s);
+    if (s.cartasNaMesa.filter(c => c).length === 4) setTimeout(() => resolverVaza(io, salaId), 1000);
+    else verificarBot(io, salaId);
+}
+
+function resolverVaza(io, salaId) {
+    const s = salas[salaId];
+    if (!s) return;
+    const vIdx = determinarVencedor(s.cartasNaMesa, s.trunfoNaipe, s.naipePuxado);
+    const pts = calcularPontos(s.cartasNaMesa);
+    if (vIdx === 0 || vIdx === 2) s.ptsNos += pts; else s.ptsEles += pts;
+    s.cartasNaMesa = [null, null, null, null]; s.naipePuxado = null; s.jogadorAtual = vIdx;
+    if (s.maos[0].length === 0) finalizarRodada(io, salaId);
+    else { io.to(salaId).emit('updateRoom', s); verificarBot(io, salaId); }
+}
+
+async function finalizarRodada(io, salaId) {
+    const s = salas[salaId];
+    if (!s) return;
+
+    const pts = calcularPontos(s.cartasNaMesa);
+    const vencedorVaza = determinarVencedor(s.cartasNaMesa, s.trunfoNaipe, s.naipePuxado);
+    
+    if (vencedorVaza === 0 || vencedorVaza === 2) s.ptsNos += pts;
+    else s.ptsEles += pts;
+
+    s.cartasNaMesa = [null, null, null, null];
+    s.naipePuxado = null;
+    s.jogadorAtual = vencedorVaza;
+
+    // Se a mão acabou (cartas acabaram)
+    if (s.maos[0].length === 0) {
+        if (s.ptsNos > 60) s.placarNos += (s.ptsNos > 90 ? 2 : 1);
+        else if (s.ptsEles > 60) s.placarEles += (s.ptsEles > 90 ? 2 : 1);
+        else { /* empate 60-60 não soma nada */ }
+
+        s.ptsNos = 0; s.ptsEles = 0;
+        s.fase = 'espera';
+    }
+
+    // VERIFICA SE ALGUÉM GANHOU O JOGO (4 pontos/bandeiras)
+    if (s.placarNos >= 4 || s.placarEles >= 4) {
+        const vence = s.placarNos >= 4 ? 'nos' : 'eles';
+        io.to(salaId).emit('fimDeJogo', { vencedor: vence, placar: { nos: s.placarNos, eles: s.placarEles } });
+
+        // 1. Fechar o jogo na tabela 'games'
+        if (s.dbGameId) {
+            await dbm.finalizarJogoSQL(s.dbGameId);
+        }
+
+        // 2. Preparar resultados para a tabela 'users' (quem ganhou leva 1, quem perdeu leva 0)
+        // Todos os humanos levam +1 em 'jogos_jogados'
+        const resultados = s.jogadores.filter(p => !p.isBot).map(p => {
+            const ganhou = (vence === 'nos' && (p.posicao === 0 || p.posicao === 2)) || 
+                           (vence === 'eles' && (p.posicao === 1 || p.posicao === 3));
+            return {
+                nome: p.nome,
+                pontosGanhos: ganhou ? 1 : 0
+            };
+        });
+
+        await dbm.gravarResultadosPartida(resultados);
+        enviarRanking(io);
+
+        // Limpar sala após 5 segundos
+        setTimeout(() => {
+            delete salas[salaId];
+            io.to(salaId).emit('updateRoom', null);
+            enviarListaSalas(io);
+        }, 5000);
+
+    } else {
+        // O jogo continua, próxima rodada de distribuição
+        if (s.fase === 'espera') {
+            s.dadorIdx = (s.dadorIdx + 1) % 4;
+            setTimeout(() => prepararNovaRodada(io, salaId), 2000);
+        } else {
+            // Continua a vaza atual
+            io.to(salaId).emit('updateRoom', s);
+            verificarBot(io, salaId);
+        }
+    }
+}
+
+function verificarBot(io, salaId) {
+    const s = salas[salaId];
+    if (!s || s.fase !== 'jogando') return;
+    const bot = s.jogadores.find(p => p.posicao === s.jogadorAtual);
+    if (bot?.isBot) {
+        setTimeout(() => {
+            const mao = s.maos[bot.posicao];
+            if (!mao || mao.length === 0) return;
+            const val = mao.filter(c => !s.naipePuxado || c.naipe === s.naipePuxado || !mao.some(x => x.naipe === s.naipePuxado));
+            const esc = val[Math.floor(Math.random() * val.length)];
+            if (esc) processarJogada(io, salaId, bot.posicao, esc.id);
+        }, 1200);
+    }
+}
+
+function enviarListaSalas(io) {
+    const lista = Object.values(salas)
+        .filter(s => s.jogadores.some(p => !p.isBot)) // SÓ remove salas 100% de bots
+        .map(s => ({
+            id: s.id,
+            total: s.jogadores.length, 
+            humanos: s.jogadores.filter(p => !p.isBot).length,
+            fase: s.fase // Enviamos a fase para o cliente saber se pode entrar
+        }));
+    io.emit('listaSalas', lista);
+}
+
+async function enviarRanking(io) {
+    const r = await dbm.obterRanking();
+    io.emit('listaRanking', r);
 }

@@ -32,17 +32,16 @@ export function baralhar(cartas) {
   return b;
 }
 
-export function partirBaralho(baralho, posicao) {
-  const p = parseInt(posicao);
-  const topo = baralho.slice(0, p);
-  const fundo = baralho.slice(p);
-  return fundo.concat(topo); 
-}
+export function distribuir(baralho, escolha, quemDa, indiceCorte = 20) {
+  // Aplicar o Corte Real: Divide o baralho no índice escolhido e inverte as partes
+  const parteDeCima = baralho.slice(0, indiceCorte);
+  const parteDeBaixo = baralho.slice(indiceCorte);
+  const baralhoCortado = [...parteDeBaixo, ...parteDeCima];
 
-export function distribuir(baralho, escolha, quemDa) {
   const maos = [[], [], [], []];
-  let cartas = [...baralho];
+  let cartas = [...baralhoCortado];
   
+  // Trunfo baseado no baralho já cortado
   let trunfo = (escolha === 'primeira') ? cartas[0] : cartas[39];
   const ordem = [(quemDa + 1) % 4, (quemDa + 2) % 4, (quemDa + 3) % 4, quemDa];
 
@@ -68,29 +67,26 @@ export function determinarVencedor(mesa, trunfoNaipe, naipePuxado) {
       vencedorIdx = i;
       return;
     }
-
     const eTrunfo = carta.naipe === trunfoNaipe;
     const melhorETrunfo = melhorCarta.naipe === trunfoNaipe;
 
     if (eTrunfo && !melhorETrunfo) {
       melhorCarta = carta;
       vencedorIdx = i;
-    } else if (eTrunfo && melhorETrunfo) {
-      if (carta.ordem > melhorCarta.ordem) {
-        melhorCarta = carta;
-        vencedorIdx = i;
-      }
-    } else if (!eTrunfo && !melhorETrunfo && carta.naipe === naipePuxado) {
-      if (carta.ordem > melhorCarta.ordem) {
-        melhorCarta = carta;
-        vencedorIdx = i;
+    } else if (eTrunfo === melhorETrunfo) {
+      if (carta.naipe === melhorCarta.naipe) {
+        if (carta.ordem > melhorCarta.ordem) {
+          melhorCarta = carta;
+          vencedorIdx = i;
+        }
+      } else if (carta.naipe === naipePuxado && melhorCarta.naipe !== trunfoNaipe) {
+          // Mantém a melhor carta se a nova não for trunfo nem do naipe puxado
       }
     }
   });
-
   return vencedorIdx;
 }
 
-export function calcularPontos(mesa) {
-  return mesa.reduce((acc, c) => acc + (c ? c.pontos : 0), 0);
+export function calcularPontos(vaza) {
+  return vaza.reduce((acc, c) => acc + (c.pontos || 0), 0);
 }
