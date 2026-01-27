@@ -7,14 +7,11 @@ let timeoutsDesconexao = {};
 export function setupSockets(io) {
   io.on('connection', socket => {
 
-    // --- LOGIN E RANKING ---
 socket.on('login', async (nome) => {
-    // Verifica se o nome é válido (não vazio e não apenas espaços)
     if (!nome || nome.trim().length === 0) {
         return socket.emit('erroLogin', "Por favor, escolhe um nome de utilizador válido.");
     }
     
-    // Limpa espaços extras (ex: "  João  " vira "João")
     const nomeLimpo = nome.trim();
     socket.nome = nomeLimpo;
     
@@ -22,13 +19,11 @@ socket.on('login', async (nome) => {
     enviarRanking(io);
 });
 
-    // --- GESTÃO DE SALAS ---
     socket.on('pedirSalas', () => { 
         enviarListaSalas(io);
     });
 
     socket.on('joinRoom', async ({ salaId, nome }) => {
-      // 1. Validação de nome (vazio ou espaços)
       if (!nome || nome.trim() === "" || !salaId) {
           return socket.emit('erroLogin', "Nome inválido ou sala não especificada.");
       }
@@ -37,7 +32,6 @@ socket.on('login', async (nome) => {
       socket.nome = nomeLimpo;
       socket.salaId = salaId;
 
-      // Inicializa a sala se não existir
       if (!salas[salaId]) {
         salas[salaId] = { 
             id: salaId, jogadores: [], dadorIdx: 0, placarNos: 0, placarEles: 0, 
@@ -49,14 +43,12 @@ socket.on('login', async (nome) => {
       
       const s = salas[salaId];
 
-      // 2. Verificação de Duplicados e Reconexão
       const jogadorExistente = s.jogadores.find(p => 
           p.nome.toLowerCase() === nomeLimpo.toLowerCase() || 
           p.nome.toLowerCase() === `bot ${nomeLimpo}`.toLowerCase()
       );
 
       if (jogadorExistente) {
-          // Se for BOT ou estiver em timeout, é reconexão
           if (jogadorExistente.isBot || timeoutsDesconexao[`${salaId}-${nomeLimpo}`]) {
               if (timeoutsDesconexao[`${salaId}-${nomeLimpo}`]) {
                   clearTimeout(timeoutsDesconexao[`${salaId}-${nomeLimpo}`]);
@@ -78,20 +70,16 @@ socket.on('login', async (nome) => {
       socket.join(salaId);
       io.to(salaId).emit('updateRoom', s);
       
-      // Se houver jogo a decorrer, envia a mão
       if (jogadorExistente && s.maos[jogadorExistente.posicao]?.length > 0) {
           socket.emit('suaMao', s.maos[jogadorExistente.posicao]);
       }
 
-      // 3. SE A MESA FICAR CHEIA: Grava no SQL e Inicia
       if (s.jogadores.length === 4 && s.fase === 'espera') {
           try {
-              // Regista o início do jogo nas tabelas 'games' e 'game_players'
               s.dbGameId = await dbm.registarInicioJogo(s.jogadores);
               prepararNovaRodada(io, salaId);
           } catch (err) {
               console.error("Erro ao iniciar jogo no SQL:", err);
-              // Mesmo com erro no SQL, o jogo inicia para não travar os jogadores
               prepararNovaRodada(io, salaId);
           }
       }
@@ -99,7 +87,6 @@ socket.on('login', async (nome) => {
       enviarListaSalas(io);
     });
 
-    // --- SAÍDAS E DESCONEXÕES ---
     socket.on('leaveRoom', () => {
         executarSaida(io, socket);
     });
@@ -107,14 +94,12 @@ socket.on('login', async (nome) => {
     socket.on('disconnect', () => {
         const { salaId, nome } = socket;
         if (salaId && nome && salas[salaId]) {
-            // Aguarda 10 segundos (mais rápido que os 20 anteriores para evitar "fantasmas")
             timeoutsDesconexao[`${salaId}-${nome}`] = setTimeout(() => {
                 executarSaida(io, socket);
             }, 10000);
         }
     });
 
-    // --- LÓGICA DO JOGO ---
     socket.on('addBot', () => {
         const s = salas[socket.salaId];
         if (s && s.jogadores.length < 4 && s.fase === 'espera') {
@@ -142,7 +127,7 @@ socket.on('login', async (nome) => {
     socket.on('jogarCarta', ({ idCarta }) => {
         const s = salas[socket.salaId];
         if (!s || s.fase !== 'jogando') return;
-        const p = s.jogadores.find(px => px.id === socket.id); // Busca por ID é mais seguro
+        const p = s.jogadores.find(px => px.id === socket.id); 
         if (p && p.posicao === s.jogadorAtual) processarJogada(io, socket.salaId, p.posicao, idCarta);
     });
   });
@@ -153,7 +138,6 @@ function executarSaida(io, socket) {
     if (!salaId || !salas[salaId]) return;
 
     const s = salas[salaId];
-    // Se quem sai é o Host (primeiro jogador) ou se não sobrar nenhum humano real
     const eHost = s.jogadores[0] && s.jogadores[0].nome === nome;
     const apenasBotsRestantes = s.jogadores.every(p => p.isBot || p.nome === nome);
 
@@ -246,7 +230,6 @@ async function finalizarRodada(io, salaId) {
     s.naipePuxado = null;
     s.jogadorAtual = vencedorVaza;
 
-    // Se a mão acabou (cartas acabaram)
     if (s.maos[0].length === 0) {
         if (s.ptsNos > 60) s.placarNos += (s.ptsNos > 90 ? 2 : 1);
         else if (s.ptsEles > 60) s.placarEles += (s.ptsEles > 90 ? 2 : 1);
@@ -256,18 +239,14 @@ async function finalizarRodada(io, salaId) {
         s.fase = 'espera';
     }
 
-    // VERIFICA SE ALGUÉM GANHOU O JOGO (4 pontos/bandeiras)
     if (s.placarNos >= 4 || s.placarEles >= 4) {
         const vence = s.placarNos >= 4 ? 'nos' : 'eles';
         io.to(salaId).emit('fimDeJogo', { vencedor: vence, placar: { nos: s.placarNos, eles: s.placarEles } });
 
-        // 1. Fechar o jogo na tabela 'games'
         if (s.dbGameId) {
             await dbm.finalizarJogoSQL(s.dbGameId);
         }
 
-        // 2. Preparar resultados para a tabela 'users' (quem ganhou leva 1, quem perdeu leva 0)
-        // Todos os humanos levam +1 em 'jogos_jogados'
         const resultados = s.jogadores.filter(p => !p.isBot).map(p => {
             const ganhou = (vence === 'nos' && (p.posicao === 0 || p.posicao === 2)) || 
                            (vence === 'eles' && (p.posicao === 1 || p.posicao === 3));
@@ -280,7 +259,6 @@ async function finalizarRodada(io, salaId) {
         await dbm.gravarResultadosPartida(resultados);
         enviarRanking(io);
 
-        // Limpar sala após 5 segundos
         setTimeout(() => {
             delete salas[salaId];
             io.to(salaId).emit('updateRoom', null);
@@ -288,12 +266,10 @@ async function finalizarRodada(io, salaId) {
         }, 5000);
 
     } else {
-        // O jogo continua, próxima rodada de distribuição
         if (s.fase === 'espera') {
             s.dadorIdx = (s.dadorIdx + 1) % 4;
             setTimeout(() => prepararNovaRodada(io, salaId), 2000);
         } else {
-            // Continua a vaza atual
             io.to(salaId).emit('updateRoom', s);
             verificarBot(io, salaId);
         }
@@ -317,12 +293,12 @@ function verificarBot(io, salaId) {
 
 function enviarListaSalas(io) {
     const lista = Object.values(salas)
-        .filter(s => s.jogadores.some(p => !p.isBot)) // SÓ remove salas 100% de bots
+        .filter(s => s.jogadores.some(p => !p.isBot)) 
         .map(s => ({
             id: s.id,
             total: s.jogadores.length, 
             humanos: s.jogadores.filter(p => !p.isBot).length,
-            fase: s.fase // Enviamos a fase para o cliente saber se pode entrar
+            fase: s.fase 
         }));
     io.emit('listaSalas', lista);
 }

@@ -8,13 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: '', // A tua password do MySQL aqui
+  password: '', 
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 };
 
-// Criamos o pool (o 'database: suecada' é adicionado após a verificação)
 export const db = mysql.createPool({
     ...dbConfig,
     database: 'suecada'
@@ -22,9 +21,8 @@ export const db = mysql.createPool({
 
 async function inicializarBancoDeDados() {
   try {
-    console.log('⏳ A verificar servidor MySQL e base de dados...');
+    console.log('A verificar servidor MySQL e base de dados...');
     
-    // 1. Ligação temporária para garantir que a DB existe
     const tempConn = await mysql.createConnection({
         host: dbConfig.host,
         user: dbConfig.user,
@@ -34,7 +32,6 @@ async function inicializarBancoDeDados() {
     await tempConn.query(`CREATE DATABASE IF NOT EXISTS suecada`);
     await tempConn.end();
 
-    // 2. Executar o ficheiro SQL para garantir as tabelas
     const connection = await db.getConnection();
     const sqlPath = path.join(__dirname, 'suecada.sql');
     
@@ -46,11 +43,10 @@ async function inicializarBancoDeDados() {
     }
     
     connection.release();
-    console.log('✅ Base de dados e tabelas verificadas/criadas com sucesso!');
+    console.log('Base de dados e tabelas verificadas/criadas com sucesso!');
   } catch (error) {
-    console.error('❌ Erro ao inicializar base de dados:', error.message);
+    console.error('Erro ao inicializar base de dados:', error.message);
   }
 }
 
-// Inicia a verificação automaticamente
 inicializarBancoDeDados();
