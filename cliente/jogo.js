@@ -1,16 +1,13 @@
 const socket = io();
 
-// --- ESTADO GLOBAL ---
 let meuNome = localStorage.getItem('sueca_nome') || "";
 let minhaSala = localStorage.getItem('sueca_sala') || "";
 let meuIdx = null; 
 let estado = {};   
 let maoLocal = []; 
 
-// CHAMADA INICIAL
 configurarSocket();
 
-// --- INICIALIZAÇÃO ---
 window.onload = () => {
     const nomeGuardado = localStorage.getItem('sueca_nome');
     const salaGuardada = localStorage.getItem('sueca_sala');
@@ -57,7 +54,6 @@ function configurarSocket() {
         }).join('') || '<div class="col-span-2 text-center py-10 opacity-20 font-bold uppercase tracking-widest">Cria uma mesa para começar!</div>';
     });
 
-    // 2. Atualização do Estado do Jogo
     socket.on('updateRoom', (s) => {
         estado = s;
         if (s.id) {
@@ -76,15 +72,12 @@ function configurarSocket() {
         atualizarInterface();
     });
 
-    // --- NOVO: Listener para o Fim de Jogo Total (4 vitórias) ---
    socket.on('finalDeJogoTotal', (dados) => {
     alert(dados.mensagem);
     
-    // Limpa a memória da sala no browser
     localStorage.removeItem('sueca_sala');
     minhaSala = "";
     
-    // Volta ao lobby
     irParaLobby(true);
 });
 
@@ -129,7 +122,6 @@ function configurarSocket() {
     });
 }
 
-// --- LOGICA DE NAVEGAÇÃO ---
 
 function irParaLogin() {
     document.getElementById('screen-home').classList.remove('hidden');
@@ -142,11 +134,9 @@ function irParaLobby(silencioso = false) {
     const screenLobby = document.getElementById('screen-lobby');
     const screenGame = document.getElementById('screen-game');
 
-    // Forçar o desaparecimento usando Style direto (mais forte que classes)
     if (screenHome) screenHome.style.display = 'none';
     if (screenGame) screenGame.style.display = 'none';
     
-    // Mostrar o Lobby
     if (screenLobby) {
         screenLobby.style.display = 'flex';
         screenLobby.classList.remove('hidden');
@@ -174,7 +164,6 @@ function entrarNaSala(id) {
     minhaSala = id;
     localStorage.setItem('sueca_sala', id);
     
-    // Esconde tudo e mostra o jogo
     document.getElementById('screen-home').style.display = 'none';
     document.getElementById('screen-lobby').style.display = 'none';
     
@@ -196,26 +185,21 @@ function logout() {
 
 function sairDaMesa() {
     if (confirm("Desejas sair desta mesa e voltar ao lobby?")) {
-        // 1. Avisa o servidor
         socket.emit('leaveRoom');
         
-        // 2. Limpa o registo da sala IMEDIATAMENTE
         localStorage.removeItem('sueca_sala');
         minhaSala = "";
         
-        // 3. Muda para o lobby
         irParaLobby(true);
     }
 }
 
-// --- RENDERIZAÇÃO DA MÃO ---
 
 function renderizarMinhaMao() {
     const container = document.getElementById('minha-mao');
     if (!container) return;
     container.innerHTML = "";
 
-    // Ordenação das cartas por naipe e valor
     const ordemNaipe = { 'hearts': 0, 'diamonds': 1, 'clubs': 2, 'spades': 3 };
     maoLocal.sort((a, b) => {
         if (a.naipe !== b.naipe) return ordemNaipe[a.naipe] - ordemNaipe[b.naipe];
@@ -236,20 +220,15 @@ function renderizarMinhaMao() {
             img.classList.add('cursor-pointer', 'hover:-translate-y-6', 'ring-2', 'ring-yellow-500', 'z-10');
             
             img.onclick = () => {
-                // --- PREVENÇÃO DE CLIQUES DUPLOS ---
-                // Bloqueia cliques adicionais na carta imediatamente
                 img.style.pointerEvents = 'none'; 
                 img.classList.add('opacity-50', 'scale-95');
 
-                // Envia a jogada para o servidor
                 socket.emit('jogarCarta', { idCarta: carta.id });
                 
-                // Remove a carta da mão local e atualiza a interface instantaneamente
                 maoLocal.splice(index, 1);
                 renderizarMinhaMao();
             };
         } else {
-            // Estilização para cartas que não podem ser jogadas
             img.classList.add('brightness-[0.3]', 'grayscale-[0.5]', 'cursor-not-allowed');
         }
         container.appendChild(img);
@@ -257,19 +236,16 @@ function renderizarMinhaMao() {
 }
 
 function atualizarInterface() {
-    // 1. Atualizar o ID da Sala no Header
     const roomHeader = document.getElementById('room-id-header');
     if (roomHeader && minhaSala) {
         roomHeader.innerText = `#${minhaSala.toUpperCase()}`;
     }
 
-    // 2. Placar e Pontuação
     document.getElementById('vitorias-nos').innerText = estado.placarNos || 0;
     document.getElementById('vitorias-eles').innerText = estado.placarEles || 0;
     document.getElementById('pontos-nos').innerText = `(${estado.ptsNos || 0})`;
     document.getElementById('pontos-eles').innerText = `(${estado.ptsEles || 0})`;
 
-    // 3. Exibição do Trunfo
     const trunfoDiv = document.getElementById('trunfo-display');
     if (trunfoDiv) {
         if (estado.trunfo && estado.trunfo.imagem) {
@@ -281,7 +257,6 @@ function atualizarInterface() {
         }
     }
 
-    // 4. Jogadores e Cartas na Mesa
     if (meuIdx !== null && estado.jogadores) {
         [0, 1, 2, 3].forEach(offset => {
             const idxReal = (meuIdx + offset) % 4;
@@ -291,7 +266,6 @@ function atualizarInterface() {
             
             const isVezDesteJogador = (idxReal === estado.jogadorAtual && estado.fase === 'jogando');
 
-            // Atualizar Nome e Ícones (Bot/Host)
             if (elNome) {
                 let txt = p ? p.nome : "Aguardando...";
                 if (p && p.isBot) txt += " 🤖";
@@ -299,7 +273,6 @@ function atualizarInterface() {
                 
                 elNome.innerText = txt;
 
-                // Destacar nome se for a vez dele
                 if (isVezDesteJogador) {
                     elNome.classList.add('text-yellow-500', 'font-black', 'scale-110');
                 } else {
@@ -307,11 +280,9 @@ function atualizarInterface() {
                 }
             }
 
-            // Atualizar Carta no Slot e brilho de "Vez"
             if (slot) {
                 const carta = estado.cartasNaMesa ? estado.cartasNaMesa[idxReal] : null;
                 
-                // Brilho no slot de quem está a jogar
                 if (isVezDesteJogador) {
                     slot.classList.add('ring-4', 'ring-yellow-500/50', 'rounded-lg', 'animate-pulse');
                 } else {
@@ -325,7 +296,6 @@ function atualizarInterface() {
         });
     }
 
-    // 5. Botão de Adicionar Bot (Apenas para o Host e se houver lugar)
     const btnBot = document.getElementById('btn-add-bot');
     if (btnBot) {
         const souHost = estado.jogadores && estado.jogadores[0] && estado.jogadores[0].nome === meuNome;
